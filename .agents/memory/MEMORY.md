@@ -1,0 +1,1 @@
+- [API routing boundary](api-routing-boundary.md) — Keep public automation endpoints at the Express app boundary before API routing and frontend rewrites.

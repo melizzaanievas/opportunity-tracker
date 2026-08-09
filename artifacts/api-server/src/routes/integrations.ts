@@ -121,7 +121,7 @@ async function runAuthenticatedDailySummary(_req: Request, res: Response): Promi
   });
 }
 
-async function runPublicDailySummary(_req: Request, res: Response): Promise<void> {
+export async function runPublicDailySummary(_req: Request, res: Response): Promise<void> {
   try {
     const { text } = await buildDailySummary();
     const sent = await sendTelegramMessage(text);
@@ -136,7 +136,7 @@ async function runPublicDailySummary(_req: Request, res: Response): Promise<void
 
     res.status(200).json({
       success: true,
-      message: "Daily summary sent successfully",
+      message: "Daily summary sent",
     });
   } catch (err) {
     logger.error({ err }, "Public daily summary failed");
@@ -147,9 +147,9 @@ async function runPublicDailySummary(_req: Request, res: Response): Promise<void
   }
 }
 
-// Public GET endpoint for external cron services.
-// The POST variant below remains protected for dashboard/manual use.
-router.get("/cron-daily-summary", runPublicDailySummary);
+// The public GET endpoint is mounted at the app level in app.ts so it is
+// registered before the complete API router. The POST variant remains
+// protected for dashboard/manual use.
 router.post("/cron-daily-summary", requireAuth, runAuthenticatedDailySummary);
 
 export default router;
