@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startCronJobs } from "./lib/cron";
+import { registerTelegramWebhook } from "./lib/register-webhook";
 
 const rawPort = process.env["PORT"];
 
@@ -24,4 +25,7 @@ app.listen(port, (err) => {
 
   logger.info({ port }, "Server listening");
   startCronJobs();
+  // Register Telegram webhook after a short delay to ensure the server is
+  // fully accepting connections before Telegram tries to verify the URL.
+  setTimeout(() => { void registerTelegramWebhook(); }, 3000);
 });
