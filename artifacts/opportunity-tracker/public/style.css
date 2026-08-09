@@ -1,0 +1,152 @@
+/* ==========================================================================
+   Opportunity Tracker — Ethereal Pastel Gothic Theme (style.css)
+   Target Aesthetic: Dreamy, starry, romantic lavender-to-twilight palette
+   ========================================================================== */
+
+/* 1. Google Fonts Import */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
+
+/* 2. Global Variables & Color Tokens */
+:root {
+  /* Theme Palette */
+  --bg-gradient: linear-gradient(160deg, #181935 0%, #292952 35%, #4a4570 70%, #7c6c9b 100%);
+  --glass-bg: rgba(255, 255, 255, 0.08);
+  --glass-bg-hover: rgba(255, 255, 255, 0.14);
+  --glass-border: rgba(230, 220, 255, 0.25);
+  
+  /* Text Colors */
+  --text-heading: #f4effa;
+  --text-body: #dcd6e8;
+  --text-muted: #a8a0be;
+  
+  /* Accents & Glows */
+  --gold-accent: #f3e5ab;
+  --gold-glow: rgba(243, 229, 171, 0.45);
+  --gold-border: rgba(243, 229, 171, 0.6);
+  
+  /* Fonts */
+  --font-heading: 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+/* 3. Base Body Setup & Background Gradient */
+html, body {
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  background: var(--bg-gradient);
+  background-attachment: fixed;
+  color: var(--text-body);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* 4. Typography Rules */
+h1, h2, h3, h4, h5, h6, .title, .heading {
+  font-family: var(--font-heading);
+  color: var(--text-heading);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-shadow: 0 0 12px rgba(220, 200, 255, 0.2);
+}
+
+h1 { font-size: 2.5rem; }
+h2 { font-size: 1.85rem; }
+h3 { font-size: 1.4rem; }
+
+/* 5. Frosted Glass Cards & Containers */
+.card, .container, .modal, .form-container, table, .dashboard-panel {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid var(--glass-border) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px 0 rgba(12, 10, 28, 0.37);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  background: var(--glass-bg-hover) !important;
+  border-color: rgba(243, 229, 171, 0.4) !important;
+  box-shadow: 0 12px 40px 0 rgba(12, 10, 28, 0.5), 0 0 15px var(--gold-glow);
+}
+
+/* 6. Form Elements & Inputs */
+input, select, textarea {
+  background: rgba(20, 18, 40, 0.4) !important;
+  border: 1px solid var(--glass-border) !important;
+  color: var(--text-heading) !important;
+  border-radius: 8px !important;
+  padding: 0.6rem 1rem;
+  backdrop-filter: blur(6px);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--gold-border) !important;
+  box-shadow: 0 0 10px var(--gold-glow);
+}
+
+/* 7. Buttons with Golden Glow Borders */
+button, .btn, input[type="submit"] {
+  background: linear-gradient(135deg, rgba(124, 108, 155, 0.4), rgba(41, 41, 82, 0.6)) !important;
+  color: var(--gold-accent) !important;
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  border: 1px solid var(--gold-border) !important;
+  border-radius: 20px !important;
+  padding: 0.55rem 1.4rem;
+  cursor: pointer;
+  box-shadow: 0 0 12px var(--gold-glow);
+  transition: all 0.3s ease;
+}
+
+button:hover, .btn:hover {
+  background: linear-gradient(135deg, rgba(154, 138, 185, 0.6), rgba(61, 61, 112, 0.8)) !important;
+  border-color: var(--gold-accent) !important;
+  box-shadow: 0 0 20px rgba(243, 229, 171, 0.75), 0 0 8px #ffffff;
+  transform: translateY(-1px);
+}
+
+/* 8. Pure CSS Floating Bubbles Background Animation */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  background-image: 
+    radial-gradient(circle at 15% 80%, rgba(255, 255, 255, 0.12) 1px, transparent 8px),
+    radial-gradient(circle at 35% 85%, rgba(230, 220, 255, 0.15) 2px, transparent 12px),
+    radial-gradient(circle at 65% 90%, rgba(243, 229, 171, 0.1) 1.5px, transparent 10px),
+    radial-gradient(circle at 85% 75%, rgba(255, 255, 255, 0.14) 2px, transparent 14px);
+  background-size: 100% 100%;
+  animation: floatBubbles 22s linear infinite;
+}
+
+@keyframes floatBubbles {
+  0% {
+    transform: translateY(0);
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-100vh);
+    opacity: 0.2;
+  }
+}
+
+/* Ensure content stays above ambient background bubbles */
+main, .app-container, #root, #app {
+  position: relative;
+  z-index: 1;
+}

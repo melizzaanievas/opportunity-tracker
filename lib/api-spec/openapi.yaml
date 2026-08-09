@@ -1,0 +1,667 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Opportunity Tracker API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: opportunities
+    description: Opportunity management
+  - name: tasks
+    description: Sub-task management
+  - name: integrations
+    description: External integrations
+  - name: dashboard
+    description: Dashboard statistics
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # Auth
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Log in with the app password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginCredentials"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthStatus"
+        "401":
+          description: Invalid password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Log out
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthStatus"
+
+  /auth/me:
+    get:
+      operationId: getAuthMe
+      tags: [auth]
+      summary: Get current authentication status
+      responses:
+        "200":
+          description: Auth status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthStatus"
+
+  # Dashboard stats
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  # Opportunities
+  /opportunities:
+    get:
+      operationId: listOpportunities
+      tags: [opportunities]
+      summary: List all opportunities sorted by deadline
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [to-apply, applied, completed]
+          required: false
+          description: Filter by status
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [job, grant, hackathon, other]
+          required: false
+          description: Filter by type
+      responses:
+        "200":
+          description: List of opportunities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Opportunity"
+
+    post:
+      operationId: createOpportunity
+      tags: [opportunities]
+      summary: Create a new opportunity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpportunityInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Opportunity"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /opportunities/scrape:
+    post:
+      operationId: scrapeOpportunityUrl
+      tags: [opportunities]
+      summary: Scrape a URL to auto-extract opportunity details
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScrapeRequest"
+      responses:
+        "200":
+          description: Scraped data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScrapedData"
+        "400":
+          description: Scrape failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /opportunities/{id}:
+    get:
+      operationId: getOpportunity
+      tags: [opportunities]
+      summary: Get a single opportunity
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: number
+          required: true
+      responses:
+        "200":
+          description: Opportunity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Opportunity"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      operationId: updateOpportunity
+      tags: [opportunities]
+      summary: Update an opportunity
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: number
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpportunityPatch"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Opportunity"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: deleteOpportunity
+      tags: [opportunities]
+      summary: Delete an opportunity
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: number
+          required: true
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # Sub-tasks
+  /opportunities/{id}/tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      summary: List sub-tasks for an opportunity
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: number
+          required: true
+      responses:
+        "200":
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+
+    post:
+      operationId: createTask
+      tags: [tasks]
+      summary: Add a sub-task to an opportunity
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: number
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          description: Opportunity not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /opportunities/{id}/tasks/{taskId}:
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      summary: Update a sub-task
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: number
+          required: true
+        - in: path
+          name: taskId
+          schema:
+            type: number
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskPatch"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: deleteTask
+      tags: [tasks]
+      summary: Delete a sub-task
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: number
+          required: true
+        - in: path
+          name: taskId
+          schema:
+            type: number
+          required: true
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # Google Calendar
+  /opportunities/{id}/calendar:
+    post:
+      operationId: addToCalendar
+      tags: [integrations]
+      summary: Initiate Google Calendar OAuth and add deadline event
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: number
+          required: true
+      responses:
+        "200":
+          description: Calendar auth URL or success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarResult"
+        "404":
+          description: Opportunity not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /integrations/google/callback:
+    get:
+      operationId: googleOAuthCallback
+      tags: [integrations]
+      summary: Google OAuth 2.0 callback handler
+      parameters:
+        - in: query
+          name: code
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: state
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: error
+          schema:
+            type: string
+          required: false
+      responses:
+        "302":
+          description: Redirect back to frontend
+
+  # Telegram
+  /integrations/telegram/test:
+    post:
+      operationId: testTelegramAlert
+      tags: [integrations]
+      summary: Send a test Telegram digest message
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelegramResult"
+
+  /cron-daily-summary:
+    post:
+      operationId: cronDailySummary
+      tags: [integrations]
+      summary: Secured endpoint to trigger the daily Telegram summary
+      responses:
+        "200":
+          description: Summary sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelegramResult"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    # Auth
+    LoginCredentials:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+
+    AuthStatus:
+      type: object
+      required: [authenticated]
+      properties:
+        authenticated:
+          type: boolean
+
+    # Dashboard
+    DashboardStats:
+      type: object
+      required: [total, closingSoon, byStatus, byType]
+      properties:
+        total:
+          type: number
+        closingSoon:
+          type: number
+        byStatus:
+          type: object
+          required: [to-apply, applied, completed]
+          properties:
+            to-apply:
+              type: number
+            applied:
+              type: number
+            completed:
+              type: number
+        byType:
+          type: object
+          required: [job, grant, hackathon, other]
+          properties:
+            job:
+              type: number
+            grant:
+              type: number
+            hackathon:
+              type: number
+            other:
+              type: number
+
+    # Opportunity
+    Opportunity:
+      type: object
+      required: [id, url, title, type, status, createdAt]
+      properties:
+        id:
+          type: number
+        url:
+          type: string
+        title:
+          type: string
+        type:
+          type: string
+          enum: [job, grant, hackathon, other]
+        status:
+          type: string
+          enum: [to-apply, applied, completed]
+        deadline:
+          type: ["string", "null"]
+          description: ISO date string YYYY-MM-DD
+        summary:
+          type: ["string", "null"]
+        keyActionSteps:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        taskCount:
+          type: number
+        completedTaskCount:
+          type: number
+
+    OpportunityInput:
+      type: object
+      required: [url, title, type, status]
+      properties:
+        url:
+          type: string
+        title:
+          type: string
+          minLength: 1
+        type:
+          type: string
+          enum: [job, grant, hackathon, other]
+        status:
+          type: string
+          enum: [to-apply, applied, completed]
+        deadline:
+          type: string
+        summary:
+          type: string
+        keyActionSteps:
+          type: string
+
+    OpportunityPatch:
+      type: object
+      properties:
+        url:
+          type: string
+        title:
+          type: string
+          minLength: 1
+        type:
+          type: string
+          enum: [job, grant, hackathon, other]
+        status:
+          type: string
+          enum: [to-apply, applied, completed]
+        deadline:
+          type: string
+        summary:
+          type: string
+        keyActionSteps:
+          type: string
+
+    # Scraping
+    ScrapeRequest:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+
+    ScrapedData:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+        title:
+          type: ["string", "null"]
+        deadline:
+          type: ["string", "null"]
+        summary:
+          type: ["string", "null"]
+        keyActionSteps:
+          type: ["string", "null"]
+        scrapeSuccess:
+          type: boolean
+
+    # Tasks
+    Task:
+      type: object
+      required: [id, opportunityId, title, completed, createdAt]
+      properties:
+        id:
+          type: number
+        opportunityId:
+          type: number
+        title:
+          type: string
+        completed:
+          type: boolean
+        createdAt:
+          type: string
+
+    TaskInput:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+
+    TaskPatch:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        completed:
+          type: boolean
+
+    # Calendar
+    CalendarResult:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+        authUrl:
+          type: ["string", "null"]
+        message:
+          type: ["string", "null"]
+
+    # Telegram
+    TelegramResult:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: ["string", "null"]
+        sent:
+          type: number
