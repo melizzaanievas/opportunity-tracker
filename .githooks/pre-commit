@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+# Pre-commit hook: block SQLite database files from being committed.
+# Covers the raw DB file and the WAL/shared-memory side-car files.
+
+BLOCKED=$(git diff --cached --name-only | grep -E '\.(db|db-shm|db-wal|sqlite|sqlite3)$')
+
+if [ -n "$BLOCKED" ]; then
+  echo ""
+  echo "❌  Commit blocked — database file(s) are staged:"
+  echo ""
+  echo "$BLOCKED" | sed 's/^/    /'
+  echo ""
+  echo "These files must never be committed. To unstage them, run:"
+  echo ""
+  echo "$BLOCKED" | sed 's/^/    git restore --staged /'
+  echo ""
+  echo "If the file was committed previously and needs to be removed from"
+  echo "history, see the Gotchas section in replit.md."
+  echo ""
+  exit 1
+fi
