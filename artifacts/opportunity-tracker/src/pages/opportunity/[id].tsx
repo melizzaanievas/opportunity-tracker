@@ -178,10 +178,24 @@ export default function OpportunityDetail() {
     );
   };
 
+  const sans = "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif";
+  const serif = "'Cormorant Garamond', Georgia, serif";
+
+  const glassCard: React.CSSProperties = {
+    background: "rgba(255,255,255,0.08)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
+    border: "1px solid rgba(230,220,255,0.22)",
+    borderRadius: "16px",
+    boxShadow: "0 8px 32px rgba(12,10,28,0.3)",
+  };
+
   if (oppLoading) {
     return (
       <AppLayout>
-        <div className="flex justify-center py-24"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+        <div className="flex justify-center py-24">
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#F3E5AB" }} />
+        </div>
       </AppLayout>
     );
   }
@@ -189,7 +203,7 @@ export default function OpportunityDetail() {
   if (!opp) {
     return (
       <AppLayout>
-        <div className="text-center py-24">Opportunity not found.</div>
+        <div className="text-center py-24" style={{ fontFamily: sans, color: "#E2DAF0" }}>Opportunity not found.</div>
       </AppLayout>
     );
   }
@@ -198,154 +212,296 @@ export default function OpportunityDetail() {
   const totalCount = tasks?.length || 0;
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
+  /* ── pill tag helper ── */
+  const PillTag = ({ children, color = "rgba(230,220,255,0.18)", textColor = "#E2DAF0", borderColor = "rgba(230,220,255,0.28)" }: {
+    children: React.ReactNode; color?: string; textColor?: string; borderColor?: string;
+  }) => (
+    <span style={{
+      fontFamily: sans, fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.08em",
+      textTransform: "uppercase", padding: "3px 10px", borderRadius: "999px",
+      background: color, color: textColor, border: `1px solid ${borderColor}`,
+    }}>
+      {children}
+    </span>
+  );
+
   return (
     <AppLayout>
       <div className="max-w-3xl mx-auto space-y-6 pb-12">
+        {/* Top nav row */}
         <div className="flex items-center justify-between">
-          <Button variant="ghost" size="sm" asChild className="-ml-3 text-muted-foreground hover:text-foreground">
-            <Link href="/dashboard"><ArrowLeft className="w-4 h-4 mr-2" /> Back</Link>
-          </Button>
+          <Link href="/dashboard">
+            <button
+              className="flex items-center gap-1.5 transition-all duration-200"
+              style={{
+                fontFamily: sans, fontSize: "0.78rem", fontWeight: 600, letterSpacing: "0.04em",
+                padding: "6px 14px", borderRadius: "999px",
+                background: "rgba(255,255,255,0.05)", border: "1px solid rgba(230,220,255,0.18)",
+                color: "#a8a0be", cursor: "pointer",
+              }}
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Back
+            </button>
+          </Link>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setIsEditModalOpen(true)} className="bg-card">
-              <Edit3 className="w-4 h-4 mr-2" /> Edit
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleDeleteOpp} className="bg-card text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/20">
-              <Trash2 className="w-4 h-4" />
-            </Button>
+            <button
+              onClick={() => setIsEditModalOpen(true)}
+              className="flex items-center gap-1.5 transition-all duration-200"
+              style={{
+                fontFamily: sans, fontSize: "0.78rem", fontWeight: 600, letterSpacing: "0.04em",
+                padding: "6px 14px", borderRadius: "999px",
+                background: "rgba(255,255,255,0.06)", border: "1px solid rgba(230,220,255,0.25)",
+                color: "#E2DAF0", cursor: "pointer",
+              }}
+            >
+              <Edit3 className="w-3.5 h-3.5" /> Edit
+            </button>
+            <button
+              onClick={handleDeleteOpp}
+              className="flex items-center justify-center transition-all duration-200"
+              style={{
+                width: "34px", height: "34px", borderRadius: "999px",
+                background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)",
+                color: "#fca5a5", cursor: "pointer",
+              }}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
 
         <div className="space-y-8">
-          {/* Main Info Header */}
+          {/* ── Main Info Header ── */}
           <div>
-            <div className="flex items-center gap-3 mb-4">
-              <Badge className="bg-primary/10 text-primary hover:bg-primary/20 capitalize font-medium">{opp.type}</Badge>
-              <Badge variant="outline" className="capitalize bg-card">{opp.status.replace('-', ' ')}</Badge>
+            {/* Type / Status / Deadline tags */}
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
+              {/* Type tag — gold-tinted glass */}
+              <PillTag color="rgba(243,229,171,0.12)" textColor="#F3E5AB" borderColor="rgba(243,229,171,0.35)">
+                {opp.type}
+              </PillTag>
+              {/* Status tag */}
+              <PillTag color="rgba(255,255,255,0.06)" textColor="#c4b5fd" borderColor="rgba(196,181,253,0.3)">
+                {opp.status.replace('-', ' ')}
+              </PillTag>
+              {/* Deadline tag */}
               {opp.deadline && (
-                <Badge variant="secondary" className="flex items-center gap-1.5 bg-amber-50 text-amber-800 border-amber-200">
+                <span className="flex items-center gap-1.5" style={{
+                  fontFamily: sans, fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.06em",
+                  padding: "3px 10px", borderRadius: "999px",
+                  background: "rgba(251,191,36,0.12)", color: "#fcd34d",
+                  border: "1px solid rgba(251,191,36,0.3)",
+                }}>
                   <CalendarIcon className="w-3 h-3" />
                   {format(new Date(opp.deadline), 'MMM d, yyyy')}
-                </Badge>
+                </span>
               )}
             </div>
-            
-            <h1 className="text-4xl font-serif font-bold tracking-tight mb-4">{opp.title}</h1>
-            
-            <div className="flex items-center gap-4 flex-wrap">
+
+            {/* Title — serif */}
+            <h1 style={{
+              fontFamily: serif, fontSize: "2.4rem", fontWeight: 700,
+              letterSpacing: "0.03em", color: "#F8F5FF",
+              textShadow: "0 0 24px rgba(220,200,255,0.25)",
+              marginBottom: "16px", lineHeight: 1.2,
+            }}>
+              {opp.title}
+            </h1>
+
+            {/* Action links */}
+            <div className="flex items-center gap-3 flex-wrap">
               {opp.url && (
-                <a href={opp.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:underline bg-blue-50 px-3 py-1.5 rounded-full font-medium transition-colors">
-                  <ExternalLink className="w-4 h-4" />
-                  View Original Posting
+                <a
+                  href={opp.url} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 transition-all duration-200"
+                  style={{
+                    fontFamily: sans, fontSize: "0.75rem", fontWeight: 700,
+                    letterSpacing: "0.05em", padding: "7px 16px", borderRadius: "999px",
+                    background: "rgba(255,255,255,0.06)", border: "1px solid rgba(230,220,255,0.25)",
+                    color: "#E2DAF0", textDecoration: "none",
+                  }}
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  VIEW POSTING
                 </a>
               )}
               {opp.deadline && (
-                <Button variant="outline" size="sm" onClick={handleCalendar} disabled={addToCalendar.isPending} className="rounded-full bg-card shadow-sm h-8">
-                  {addToCalendar.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <CalendarIcon className="w-3.5 h-3.5 mr-1.5" />}
-                  Add to Calendar
-                </Button>
+                <button
+                  onClick={handleCalendar} disabled={addToCalendar.isPending}
+                  className="flex items-center gap-1.5 transition-all duration-200"
+                  style={{
+                    fontFamily: sans, fontSize: "0.75rem", fontWeight: 700,
+                    letterSpacing: "0.05em", padding: "7px 16px", borderRadius: "999px",
+                    background: "rgba(255,255,255,0.06)", border: "1px solid rgba(230,220,255,0.25)",
+                    color: "#E2DAF0", cursor: addToCalendar.isPending ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {addToCalendar.isPending
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : <CalendarIcon className="w-3.5 h-3.5" />}
+                  ADD TO CALENDAR
+                </button>
               )}
             </div>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
             <div className="md:col-span-2 space-y-6">
-              {/* Summary */}
+
+              {/* ── Summary card ── */}
               {opp.summary && (
-                <Card className="shadow-sm bg-card/80 backdrop-blur-sm border-border/60">
-                  <CardHeader className="pb-3 flex flex-row items-center gap-2">
-                    <AlignLeft className="w-5 h-5 text-muted-foreground" />
-                    <CardTitle className="text-lg">Summary</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">{opp.summary}</p>
-                  </CardContent>
-                </Card>
+                <div style={glassCard}>
+                  <div className="flex items-center gap-2 p-5 pb-3">
+                    <AlignLeft className="w-4 h-4 shrink-0" style={{ color: "#a8a0be" }} />
+                    <span style={{ fontFamily: sans, fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.1em", color: "#F3E5AB", textTransform: "uppercase" }}>
+                      Summary
+                    </span>
+                  </div>
+                  <div className="px-5 pb-5">
+                    <p style={{ fontFamily: sans, fontSize: "0.875rem", color: "#E2DAF0", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+                      {opp.summary}
+                    </p>
+                  </div>
+                </div>
               )}
 
-              {/* Tasks Area */}
-              <Card className="shadow-sm bg-card/80 backdrop-blur-sm border-border/60">
-                <CardHeader className="pb-4">
+              {/* ── Action Plan card ── */}
+              <div style={glassCard}>
+                <div className="p-5 pb-4">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <ListTodo className="w-5 h-5 text-muted-foreground" />
-                      <CardTitle className="text-lg">Action Plan</CardTitle>
+                      <ListTodo className="w-4 h-4 shrink-0" style={{ color: "#a8a0be" }} />
+                      <span style={{ fontFamily: sans, fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.1em", color: "#F3E5AB", textTransform: "uppercase" }}>
+                        Action Plan
+                      </span>
                     </div>
-                    <div className="text-sm font-medium text-muted-foreground">
-                      {completedCount} / {totalCount} completed
-                    </div>
+                    <span style={{ fontFamily: sans, fontSize: "0.75rem", fontWeight: 600, color: "#a8a0be" }}>
+                      {completedCount} / {totalCount} done
+                    </span>
                   </div>
-                  <Progress value={progressPercent} className="h-2 bg-muted" />
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Task List */}
+                  {/* Progress bar */}
+                  <div style={{ height: "4px", borderRadius: "999px", background: "rgba(255,255,255,0.1)", overflow: "hidden" }}>
+                    <div style={{
+                      height: "100%", borderRadius: "999px",
+                      width: `${progressPercent}%`,
+                      background: "linear-gradient(90deg, #818cf8, #c084fc)",
+                      transition: "width 0.4s ease",
+                    }} />
+                  </div>
+                </div>
+                <div className="px-5 pb-5 space-y-3">
+                  {/* Task list */}
                   {tasksLoading ? (
-                    <div className="animate-pulse flex flex-col gap-3">
-                      {[1,2].map(i => <div key={i} className="h-10 bg-muted/50 rounded-md" />)}
+                    <div className="flex flex-col gap-3">
+                      {[1,2].map(i => (
+                        <div key={i} className="h-10 rounded-lg animate-pulse" style={{ background: "rgba(255,255,255,0.05)" }} />
+                      ))}
                     </div>
                   ) : tasks?.length === 0 ? (
-                    <div className="text-center py-6 text-sm text-muted-foreground italic border border-dashed rounded-md bg-muted/20">
+                    <div className="text-center py-6" style={{
+                      fontFamily: sans, fontSize: "0.8rem", fontStyle: "italic",
+                      color: "#a8a0be", border: "1px dashed rgba(230,220,255,0.2)", borderRadius: "10px",
+                    }}>
                       No tasks yet. Break down your next steps.
                     </div>
                   ) : (
                     <div className="space-y-2">
                       {tasks?.map(task => (
-                        <div 
-                          key={task.id} 
-                          className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
-                            task.completed ? 'bg-muted/30 border-transparent' : 'bg-card border-border/50 hover:border-border shadow-sm'
-                          }`}
+                        <div
+                          key={task.id}
+                          className="flex items-start gap-3 p-3 rounded-xl transition-colors"
+                          style={{
+                            background: task.completed ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.06)",
+                            border: task.completed ? "1px solid rgba(230,220,255,0.08)" : "1px solid rgba(230,220,255,0.18)",
+                          }}
                         >
-                          <Checkbox 
-                            checked={task.completed} 
+                          <Checkbox
+                            checked={task.completed}
                             onCheckedChange={() => handleToggleTask(task.id, task.completed)}
-                            className="mt-1"
+                            className="mt-0.5"
                           />
-                          <span className={`flex-1 text-sm leading-relaxed ${task.completed ? 'text-muted-foreground line-through' : 'text-foreground font-medium'}`}>
+                          <span
+                            className="flex-1 text-sm leading-relaxed"
+                            style={{
+                              fontFamily: sans,
+                              color: task.completed ? "#a8a0be" : "#E2DAF0",
+                              textDecoration: task.completed ? "line-through" : "none",
+                            }}
+                          >
                             {task.title}
                           </span>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0 -mr-1 -mt-1"
+                          <button
                             onClick={() => handleDeleteTask(task.id)}
                             disabled={deleteTask.isPending}
+                            className="shrink-0 flex items-center justify-center transition-colors"
+                            style={{
+                              width: "26px", height: "26px", borderRadius: "6px",
+                              background: "transparent", border: "none",
+                              color: "#a8a0be", cursor: "pointer",
+                            }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#fca5a5"; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "#a8a0be"; }}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
+                          </button>
                         </div>
                       ))}
                     </div>
                   )}
 
-                  {/* Add Task */}
-                  <form onSubmit={handleCreateTask} className="flex items-center gap-2 pt-2">
-                    <Input 
-                      placeholder="Add a new task..." 
+                  {/* Add Task form */}
+                  <form onSubmit={handleCreateTask} className="flex items-center gap-2 pt-1">
+                    <input
+                      placeholder="Add a new task…"
                       value={newTaskTitle}
                       onChange={(e) => setNewTaskTitle(e.target.value)}
-                      className="flex-1 bg-white/50"
+                      className="flex-1 text-sm rounded-xl px-3 py-2 transition-all duration-200"
+                      style={{
+                        fontFamily: sans,
+                        background: "rgba(255,255,255,0.06)",
+                        border: "1px solid rgba(230,220,255,0.2)",
+                        color: "#F8F5FF",
+                        outline: "none",
+                      }}
                     />
-                    <Button type="submit" size="icon" disabled={!newTaskTitle.trim() || createTask.isPending} className="shrink-0 rounded-full shadow-sm">
+                    <button
+                      type="submit"
+                      disabled={!newTaskTitle.trim() || createTask.isPending}
+                      className="flex items-center justify-center shrink-0 transition-all duration-200"
+                      style={{
+                        width: "36px", height: "36px", borderRadius: "999px",
+                        background: "rgba(243,229,171,0.15)",
+                        border: "1px solid rgba(243,229,171,0.4)",
+                        color: "#F3E5AB", cursor: "pointer",
+                      }}
+                    >
                       {createTask.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                    </Button>
+                    </button>
                   </form>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
 
-            {/* Sidebar info */}
+            {/* ── Sidebar: Extracted Tips ── */}
             <div className="space-y-6">
               {opp.keyActionSteps && (
-                <Card className="shadow-sm bg-primary/5 border-primary/10">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base text-primary">Extracted Tips</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-primary/80 whitespace-pre-wrap leading-relaxed">
+                <div style={glassCard}>
+                  <div className="flex items-center gap-2 p-5 pb-3">
+                    <span style={{
+                      fontFamily: sans, fontSize: "0.7rem", fontWeight: 700,
+                      letterSpacing: "0.1em", color: "#F3E5AB", textTransform: "uppercase",
+                    }}>
+                      Extracted Tips
+                    </span>
+                  </div>
+                  <div className="px-5 pb-5">
+                    <p style={{
+                      fontFamily: sans, fontSize: "0.82rem", color: "#E2DAF0",
+                      lineHeight: 1.75, whiteSpace: "pre-wrap",
+                    }}>
                       {opp.keyActionSteps}
                     </p>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               )}
             </div>
           </div>
