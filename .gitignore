@@ -55,6 +55,10 @@ testem.log
 .DS_Store
 Thumbs.db
 
+# SQLite WAL runtime sidecars
+*.db-shm
+*.db-wal
+
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
 
