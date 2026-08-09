@@ -24,10 +24,10 @@ router.post("/opportunities/:id/calendar", requireAuth, async (req, res): Promis
     return;
   }
 
-  const [opp] = await db
-    .select()
-    .from(opportunitiesTable)
-    .where(eq(opportunitiesTable.id, params.data.id));
+        const [opp] = await db
+          .select()
+          .from(opportunitiesTable)
+          .where(eq(opportunitiesTable.id, oppId));
 
   if (!opp) {
     res.status(404).json({ error: "Opportunity not found" });
@@ -101,6 +101,7 @@ router.post("/integrations/telegram/test", requireAuth, async (req, res): Promis
   const { text, count } = await buildDailySummary();
   const testText = `🧪 <b>Test Alert</b>\n\nThis is a test of your Opportunity Tracker Telegram integration.\n\n${count > 0 ? text : "No upcoming deadlines to show, but the bot is working!"}`;
   const ok = await sendTelegramMessage(testText);
+
   res.json({
     success: ok,
     message: ok ? "Test message sent to Telegram!" : "Failed to send — check your TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID.",
