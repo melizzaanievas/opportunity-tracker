@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { eq } from "drizzle-orm";
 import { db, opportunitiesTable } from "../db";
 import { requireAuth } from "../middlewares/auth";
@@ -108,8 +108,7 @@ router.post("/integrations/telegram/test", requireAuth, async (req, res): Promis
   });
 });
 
-// Secured cron endpoint (also protected by auth)
-router.post("/cron-daily-summary", requireAuth, async (req, res): Promise<void> => {
+async function runDailySummary(_req: Request, res: Response): Promise<void> {
   const { text, count } = await buildDailySummary();
   let ok = true;
   if (count > 0) {
@@ -120,6 +119,11 @@ router.post("/cron-daily-summary", requireAuth, async (req, res): Promise<void> 
     message: count > 0 ? `Sent digest with ${count} opportunities` : "No upcoming deadlines",
     sent: count,
   });
-});
+}
+
+// Public GET endpoint for external cron services.
+// The POST variant below remains protected for dashboard/manual use.
+router.get("/cron-daily-summary", runDailySummary);
+router.post("/cron-daily-summary", requireAuth, runDailySummary);
 
 export default router;
