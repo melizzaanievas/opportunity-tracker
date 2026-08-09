@@ -1,7 +1,7 @@
 # See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
 # compiled output
-dist
+dist/
 tmp
 out-tsc
 *.tsbuildinfo
@@ -9,7 +9,7 @@ out-tsc
 .expo-shared
 
 # dependencies
-node_modules
+node_modules/
 
 # local environment files
 .env
@@ -49,6 +49,8 @@ sqlite.db
 npm-debug.log
 yarn-error.log
 testem.log
+*.log
+logs/
 /typings
 
 # System Files
