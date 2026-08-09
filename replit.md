@@ -61,6 +61,18 @@ A private, password-protected full-stack web dashboard for tracking jobs, grants
 
 _Populate as you build._
 
+## Database Commit Protection
+
+A pre-commit Git hook (`.githooks/pre-commit`) blocks any commit that contains staged `*.db`, `*.db-shm`, `*.db-wal`, `*.sqlite`, or `*.sqlite3` files. The hook exits non-zero and prints which files are staged along with the `git restore --staged` commands needed to unstage them.
+
+The hook path is wired in via the workspace `prepare` script in `package.json`:
+
+```
+"prepare": "git config core.hooksPath .githooks"
+```
+
+This means `pnpm install` (or `pnpm run prepare`) automatically activates the hook for any fresh clone. The live SQLite database lives at `artifacts/api-server/data/app.db` and is covered by `.gitignore`, so normal workflows will never accidentally stage it — but the hook is a second line of defence.
+
 ## Gotchas
 
 - After any OpenAPI spec change, run `pnpm --filter @workspace/api-spec run codegen` before using updated types
