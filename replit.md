@@ -73,10 +73,6 @@ The hook path is wired in via the workspace `prepare` script in `package.json`:
 
 This means `pnpm install` (or `pnpm run prepare`) automatically activates the hook for any fresh clone. The live SQLite database lives at `artifacts/api-server/data/app.db` and is covered by `.gitignore`, so normal workflows will never accidentally stage it — but the hook is a second line of defence.
 
-## Git History Scrub
-
-All SQLite database blobs (`*.db`, `*.db-shm`, `*.db-wal`, `*.sqlite`, `*.sqlite3`) have been permanently removed from every commit in Git history using `git-filter-repo`. The rewritten history was force-pushed to the remote. No database file can be recovered from any historical commit via `git checkout`.
-
 ## Gotchas
 
 - After any OpenAPI spec change, run `pnpm --filter @workspace/api-spec run codegen` before using updated types
