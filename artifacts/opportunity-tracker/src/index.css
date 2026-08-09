@@ -524,3 +524,23 @@ main, .app-container, #root, #app {
   color: #FFF1F2 !important;
   box-shadow: 0 0 18px rgba(248, 113, 113, 0.42), 0 0 6px rgba(255, 255, 255, 0.18) !important;
 }
+
+.add-task-button {
+  color: #F3E5AB !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 8px rgba(243, 229, 171, 0.18) !important;
+}
+
+.add-task-button:hover:not(:disabled) {
+  color: #FFFDF2 !important;
+  border-color: rgba(243, 229, 171, 0.75) !important;
+  box-shadow: 0 0 12px rgba(243, 229, 171, 0.6) !important;
+}
+
+.add-task-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}

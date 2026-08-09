@@ -464,15 +464,16 @@ export default function OpportunityDetail() {
                     <button
                       type="submit"
                       disabled={!newTaskTitle.trim() || createTask.isPending}
-                      className="flex items-center justify-center shrink-0 transition-all duration-200"
+                      className="add-task-button flex items-center justify-center gap-1.5 shrink-0 transition-all duration-200"
                       style={{
-                        width: "36px", height: "36px", borderRadius: "999px",
+                        minWidth: "72px", height: "36px", borderRadius: "999px",
                         background: "rgba(243,229,171,0.15)",
                         border: "1px solid rgba(243,229,171,0.4)",
                         color: "#F3E5AB", cursor: "pointer",
                       }}
                     >
                       {createTask.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                      <span>Add</span>
                     </button>
                   </form>
                 </div>
