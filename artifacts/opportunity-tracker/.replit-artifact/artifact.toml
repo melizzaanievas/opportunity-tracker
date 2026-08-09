@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Opportunity Tracker"
+description = "A private full-stack dashboard for tracking jobs, grants, and hackathon opportunities. Features a password-protected login, URL scraping to auto-extract titles/deadlines/summaries, per-card sub-task checklists with progress bars, Google Calendar event creation, Telegram daily digests, and a filterable card dashboard sorted by deadline."
+version = "1.0.0"
+id = "artifacts/opportunity-tracker"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22507
+
+[services.development]
+run = "pnpm --filter @workspace/opportunity-tracker run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/opportunity-tracker", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/opportunity-tracker/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22507"
+BASE_PATH = "/"
