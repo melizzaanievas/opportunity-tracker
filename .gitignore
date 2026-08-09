@@ -14,6 +14,16 @@ node_modules
 # local environment files
 .env
 .env.*
+!.env.example
+
+# local database files
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+sqlite.db
 
 # IDEs and editors
 /.idea
