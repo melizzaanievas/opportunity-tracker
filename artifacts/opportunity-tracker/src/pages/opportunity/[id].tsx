@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams, Link, useLocation } from "wouter";
-import { format } from "date-fns";
+import { addDays, format } from "date-fns";
 import { 
   useGetOpportunity, 
   useUpdateOpportunity, 
@@ -9,7 +9,6 @@ import {
   useCreateTask,
   useUpdateTask,
   useDeleteTask,
-  useAddToCalendar,
   getGetOpportunityQueryKey,
   getListTasksQueryKey,
   OpportunityPatch,
@@ -61,7 +60,6 @@ export default function OpportunityDetail() {
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
-  const addToCalendar = useAddToCalendar();
 
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -150,31 +148,22 @@ export default function OpportunityDetail() {
   };
 
   const handleCalendar = () => {
-    addToCalendar.mutate(
-      { id: numId },
-      {
-        onSuccess: (res) => {
-          if (res.authUrl) {
-            window.open(res.authUrl, '_blank');
-            toast({
-              title: "Authorization required",
-              description: "Please authorize Google Calendar in the new tab, then click the button again.",
-            });
-          } else if (res.success) {
-            toast({
-              title: "Added to Calendar",
-              description: res.message || "Event created successfully.",
-            });
-          }
-        },
-        onError: () => {
-          toast({
-            title: "Error",
-            description: "Failed to add to calendar.",
-            variant: "destructive"
-          });
-        }
-      }
+    if (!opp?.deadline) return;
+
+    const startDate = new Date(`${opp.deadline}T00:00:00`);
+    const calendarParams = new URLSearchParams({
+      action: "TEMPLATE",
+      text: opp.title,
+      dates: `${format(startDate, "yyyyMMdd")}/${format(addDays(startDate, 1), "yyyyMMdd")}`,
+      details: [opp.summary, opp.url ? `Link: ${opp.url}` : null]
+        .filter(Boolean)
+        .join("\n\n"),
+    });
+
+    window.open(
+      `https://calendar.google.com/calendar/render?${calendarParams.toString()}`,
+      "_blank",
+      "noopener,noreferrer",
     );
   };
 
@@ -324,18 +313,17 @@ export default function OpportunityDetail() {
               )}
               {opp.deadline && (
                 <button
-                  onClick={handleCalendar} disabled={addToCalendar.isPending}
+                  onClick={handleCalendar}
+                  aria-label="Add opportunity to Google Calendar"
                   className="flex items-center gap-1.5 transition-all duration-200"
                   style={{
                     fontFamily: sans, fontSize: "0.75rem", fontWeight: 700,
                     letterSpacing: "0.05em", padding: "7px 16px", borderRadius: "999px",
                     background: "rgba(255,255,255,0.06)", border: "1px solid rgba(230,220,255,0.25)",
-                    color: "#E2DAF0", cursor: addToCalendar.isPending ? "not-allowed" : "pointer",
+                    color: "#E2DAF0", cursor: "pointer",
                   }}
                 >
-                  {addToCalendar.isPending
-                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    : <CalendarIcon className="w-3.5 h-3.5" />}
+                  <CalendarIcon className="w-3.5 h-3.5" />
                   ADD TO CALENDAR
                 </button>
               )}
