@@ -84,7 +84,7 @@ export default function AddOpportunity() {
         onError: (err) => {
           toast({
             title: "Failed to create",
-            description: err.error || "Please check your inputs.",
+            description: err.data?.error || "Please check your inputs.",
             variant: "destructive"
           });
         }
@@ -94,24 +94,24 @@ export default function AddOpportunity() {
 
   return (
     <AppLayout>
-      <div className="max-w-2xl mx-auto space-y-6 pb-12">
-        <Button variant="ghost" size="sm" asChild className="-ml-3 text-muted-foreground hover:text-foreground">
+      <div className="new-opportunity-page max-w-2xl mx-auto space-y-6 pb-12">
+        <Button variant="ghost" size="sm" asChild className="new-opportunity-back -ml-3">
           <Link href="/dashboard"><ArrowLeft className="w-4 h-4 mr-2" /> Back</Link>
         </Button>
 
         <div className="mb-8">
-          <h1 className="text-4xl font-serif font-bold tracking-tight mb-2">New Opportunity</h1>
-          <p className="text-muted-foreground">Add a job, grant, or hackathon you want to track.</p>
+          <h1 className="new-opportunity-title text-4xl font-serif font-bold tracking-tight mb-2">New Opportunity</h1>
+          <p className="new-opportunity-description">Add a job, grant, or hackathon you want to track.</p>
         </div>
 
         {!isManual ? (
-          <Card className="shadow-sm border-primary/20 bg-primary/5">
+          <Card className="magic-import-panel">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-primary">
+              <CardTitle className="magic-import-title flex items-center gap-2">
                 <Wand2 className="w-5 h-5" />
                 Magic Import
               </CardTitle>
-              <CardDescription className="text-primary/70">
+              <CardDescription className="magic-import-description">
                 Paste the URL. We'll automatically extract the title, deadline, and summary.
               </CardDescription>
             </CardHeader>
@@ -122,41 +122,41 @@ export default function AddOpportunity() {
                   placeholder="https://..." 
                   value={scrapeInputUrl}
                   onChange={(e) => setScrapeInputUrl(e.target.value)}
-                  className="flex-1 bg-background"
+                  className="new-opportunity-input flex-1"
                   required
                 />
-                <Button type="submit" disabled={scrapeUrl.isPending || !scrapeInputUrl}>
+                <Button type="submit" className="new-opportunity-primary-button" disabled={scrapeUrl.isPending || !scrapeInputUrl}>
                   {scrapeUrl.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                   Import
                 </Button>
               </form>
             </CardContent>
             <CardFooter className="pt-0">
-              <Button variant="link" size="sm" onClick={() => setIsManual(true)} className="text-primary/60 px-0 hover:text-primary">
+              <Button variant="link" size="sm" onClick={() => setIsManual(true)} className="new-opportunity-skip-button px-0">
                 Skip and enter manually
               </Button>
             </CardFooter>
           </Card>
         ) : (
-          <Card className="shadow-sm bg-card/80 backdrop-blur-sm border-border/60">
+          <Card className="new-opportunity-form-panel">
             <form onSubmit={handleCreate}>
               <CardContent className="space-y-6 pt-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Title <span className="text-destructive">*</span></label>
+                  <label className="new-opportunity-label">Title <span className="text-destructive">*</span></label>
                   <Input 
                     value={formData.title} 
                     onChange={e => setFormData(p => ({ ...p, title: e.target.value }))} 
                     placeholder="e.g. Frontend Engineer at Acme Corp"
                     required 
-                    className="font-medium text-lg"
+                    className="new-opportunity-input font-medium text-lg"
                   />
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Type <span className="text-destructive">*</span></label>
+                    <label className="new-opportunity-label">Type <span className="text-destructive">*</span></label>
                     <Select value={formData.type} onValueChange={(v: OpportunityInputType) => setFormData(p => ({ ...p, type: v }))}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="new-opportunity-select"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="job">Job</SelectItem>
                         <SelectItem value="grant">Grant</SelectItem>
@@ -166,9 +166,9 @@ export default function AddOpportunity() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Status <span className="text-destructive">*</span></label>
+                    <label className="new-opportunity-label">Status <span className="text-destructive">*</span></label>
                     <Select value={formData.status} onValueChange={(v: OpportunityInputStatus) => setFormData(p => ({ ...p, status: v }))}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="new-opportunity-select"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="to-apply">To Apply</SelectItem>
                         <SelectItem value="applied">Applied</SelectItem>
@@ -179,54 +179,56 @@ export default function AddOpportunity() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Deadline</label>
+                  <label className="new-opportunity-label">Deadline</label>
                   <Input 
                     type="date" 
                     value={formData.deadline || ""} 
                     onChange={e => setFormData(p => ({ ...p, deadline: e.target.value }))} 
+                    className="new-opportunity-input"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">URL</label>
+                  <label className="new-opportunity-label">URL</label>
                   <Input 
                     type="url" 
                     value={formData.url} 
                     onChange={e => setFormData(p => ({ ...p, url: e.target.value }))} 
                     placeholder="https://..."
                     required
+                    className="new-opportunity-input"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Summary</label>
+                  <label className="new-opportunity-label">Summary</label>
                   <Textarea 
                     value={formData.summary || ""} 
                     onChange={e => setFormData(p => ({ ...p, summary: e.target.value }))} 
                     placeholder="Brief description of the opportunity..."
-                    className="min-h-[100px]" 
+                    className="new-opportunity-input min-h-[100px]" 
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center justify-between">
+                  <label className="new-opportunity-label flex items-center justify-between">
                     Extracted Tips
-                    <span className="text-xs font-normal bg-muted px-2 py-0.5 rounded-full">Optional</span>
+                    <span className="new-opportunity-optional">Optional</span>
                   </label>
                   <Textarea 
                     value={formData.keyActionSteps || ""} 
                     onChange={e => setFormData(p => ({ ...p, keyActionSteps: e.target.value }))} 
                     placeholder="Any specific steps, requirements, or tips extracted from the page..."
-                    className="min-h-[80px]" 
+                    className="new-opportunity-input min-h-[80px]" 
                   />
                 </div>
 
               </CardContent>
-              <CardFooter className="bg-muted/30 py-4 flex justify-end gap-3 border-t">
-                <Button type="button" variant="ghost" onClick={() => setIsManual(false)}>
+              <CardFooter className="new-opportunity-form-footer py-4 flex justify-end gap-3">
+                <Button type="button" variant="ghost" onClick={() => setIsManual(false)} className="new-opportunity-skip-button">
                   Back
                 </Button>
-                <Button type="submit" disabled={createOpp.isPending} className="shadow-sm">
+                <Button type="submit" disabled={createOpp.isPending} className="new-opportunity-primary-button">
                   {createOpp.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
                   Create Opportunity
                 </Button>

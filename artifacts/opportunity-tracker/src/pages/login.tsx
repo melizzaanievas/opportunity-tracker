@@ -32,7 +32,7 @@ export default function Login() {
         onError: (error) => {
           toast({
             title: "Access Denied",
-            description: error.error || "Incorrect password",
+            description: error.data?.error || "Incorrect password",
             variant: "destructive",
           });
         },

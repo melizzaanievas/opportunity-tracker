@@ -509,21 +509,21 @@ export default function OpportunityDetail() {
       </div>
 
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="ethereal-dialog sm:max-w-[500px]">
           <form onSubmit={handleEditSubmit}>
             <DialogHeader>
-              <DialogTitle className="font-serif text-2xl">Edit Opportunity</DialogTitle>
+              <DialogTitle className="ethereal-dialog-title font-serif text-2xl">Edit Opportunity</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Title</label>
-                <Input value={editForm.title || ""} onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))} required />
+                <label className="ethereal-dialog-label">Title</label>
+                <Input className="ethereal-dialog-field" value={editForm.title || ""} onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))} required />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Type</label>
+                  <label className="ethereal-dialog-label">Type</label>
                   <Select value={editForm.type} onValueChange={(v: OpportunityPatchType) => setEditForm(p => ({ ...p, type: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="ethereal-dialog-field"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="job">Job</SelectItem>
                       <SelectItem value="grant">Grant</SelectItem>
@@ -533,9 +533,9 @@ export default function OpportunityDetail() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Status</label>
+                  <label className="ethereal-dialog-label">Status</label>
                   <Select value={editForm.status} onValueChange={(v: OpportunityPatchStatus) => setEditForm(p => ({ ...p, status: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="ethereal-dialog-field"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="to-apply">To Apply</SelectItem>
                       <SelectItem value="applied">Applied</SelectItem>
@@ -545,23 +545,23 @@ export default function OpportunityDetail() {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Deadline</label>
-                <Input type="date" value={editForm.deadline || ""} onChange={e => setEditForm(p => ({ ...p, deadline: e.target.value }))} />
+                <label className="ethereal-dialog-label">Deadline</label>
+                <Input className="ethereal-dialog-field" type="date" value={editForm.deadline || ""} onChange={e => setEditForm(p => ({ ...p, deadline: e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">URL</label>
-                <Input value={editForm.url || ""} onChange={e => setEditForm(p => ({ ...p, url: e.target.value }))} />
+                <label className="ethereal-dialog-label">URL</label>
+                <Input className="ethereal-dialog-field" value={editForm.url || ""} onChange={e => setEditForm(p => ({ ...p, url: e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Summary</label>
-                <Textarea value={editForm.summary || ""} onChange={e => setEditForm(p => ({ ...p, summary: e.target.value }))} className="min-h-[100px]" />
+                <label className="ethereal-dialog-label">Summary</label>
+                <Textarea value={editForm.summary || ""} onChange={e => setEditForm(p => ({ ...p, summary: e.target.value }))} className="ethereal-dialog-field min-h-[100px]" />
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="ethereal-dialog-footer">
               <DialogClose asChild>
-                <Button type="button" variant="ghost">Cancel</Button>
+                <Button type="button" variant="ghost" className="ethereal-dialog-button">Cancel</Button>
               </DialogClose>
-              <Button type="submit" disabled={updateOpp.isPending}>
+              <Button type="submit" disabled={updateOpp.isPending} className="ethereal-dialog-button">
                 {updateOpp.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Save Changes
               </Button>

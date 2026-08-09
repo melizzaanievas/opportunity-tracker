@@ -326,3 +326,180 @@ main, .app-container, #root, #app {
   position: relative;
   z-index: 1;
 }
+
+/* ==========================================================================
+   New Opportunity + Edit Modal contrast refinements
+   ========================================================================== */
+
+.new-opportunity-page {
+  color: #E2DAF0;
+}
+
+.new-opportunity-title {
+  color: #F8F5FF !important;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 18px rgba(220, 200, 255, 0.28);
+}
+
+.new-opportunity-description,
+.magic-import-description {
+  color: #D9E2F8 !important;
+  font-family: var(--font-body);
+}
+
+.new-opportunity-back {
+  color: #E2DAF0 !important;
+  font-family: var(--font-body) !important;
+  font-weight: 600 !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(230, 220, 255, 0.22) !important;
+  box-shadow: 0 0 10px rgba(200, 180, 255, 0.12) !important;
+}
+
+.magic-import-panel,
+.new-opportunity-form-panel {
+  background: rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(243, 229, 171, 0.4) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(12, 10, 28, 0.35), 0 0 18px rgba(243, 229, 171, 0.08) !important;
+}
+
+.magic-import-title {
+  color: #F3E5AB !important;
+  font-family: var(--font-body) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em;
+}
+
+.new-opportunity-input,
+.new-opportunity-select {
+  background: rgba(35, 32, 65, 0.78) !important;
+  border: 1px solid rgba(230, 220, 255, 0.32) !important;
+  color: #FFFFFF !important;
+  font-family: var(--font-body) !important;
+}
+
+.new-opportunity-input::placeholder {
+  color: #FFFFFF !important;
+  opacity: 0.9 !important;
+}
+
+.new-opportunity-input:focus,
+.new-opportunity-select:focus {
+  border-color: rgba(243, 229, 171, 0.7) !important;
+  box-shadow: 0 0 12px rgba(243, 229, 171, 0.25) !important;
+}
+
+.new-opportunity-label {
+  color: #E2DAF0 !important;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.new-opportunity-optional {
+  color: #D9E2F8;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(230, 220, 255, 0.22);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.new-opportunity-primary-button,
+.new-opportunity-skip-button {
+  font-family: var(--font-heading) !important;
+  color: #F3E5AB !important;
+  background: linear-gradient(135deg, rgba(124, 108, 155, 0.45), rgba(41, 41, 82, 0.7)) !important;
+  border: 1px solid rgba(243, 229, 171, 0.55) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 0 12px rgba(243, 229, 171, 0.22) !important;
+}
+
+.new-opportunity-skip-button {
+  padding: 0.55rem 1.1rem !important;
+  text-decoration: none !important;
+}
+
+.new-opportunity-form-footer {
+  background: rgba(20, 18, 40, 0.35) !important;
+  border-top: 1px solid rgba(230, 220, 255, 0.14) !important;
+}
+
+.ethereal-dialog-overlay {
+  background: rgba(8, 7, 22, 0.76) !important;
+  backdrop-filter: blur(7px) !important;
+  -webkit-backdrop-filter: blur(7px) !important;
+}
+
+.ethereal-dialog {
+  background: rgba(20, 18, 40, 0.92) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(243, 229, 171, 0.3) !important;
+  border-radius: 16px !important;
+  color: #E2DAF0 !important;
+  box-shadow: 0 18px 60px rgba(8, 7, 22, 0.6), 0 0 20px rgba(243, 229, 171, 0.08) !important;
+}
+
+.ethereal-dialog-title {
+  color: #F8F5FF !important;
+  font-family: var(--font-heading) !important;
+  letter-spacing: 0.04em;
+}
+
+.ethereal-dialog-label {
+  display: block;
+  color: #E2DAF0 !important;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.ethereal-dialog-field {
+  background: rgba(35, 32, 65, 0.7) !important;
+  border: 1px solid rgba(230, 220, 255, 0.32) !important;
+  color: #FFFFFF !important;
+  font-family: var(--font-body) !important;
+}
+
+.ethereal-dialog-field::placeholder {
+  color: #FFFFFF !important;
+  opacity: 0.82 !important;
+}
+
+.ethereal-dialog-field:focus {
+  border-color: rgba(243, 229, 171, 0.7) !important;
+  box-shadow: 0 0 12px rgba(243, 229, 171, 0.25) !important;
+}
+
+.ethereal-dialog-field::-webkit-calendar-picker-indicator {
+  filter: invert(1) sepia(0.3) saturate(1.5);
+  opacity: 0.95;
+}
+
+.ethereal-dialog-button,
+.ethereal-dialog-close {
+  background: linear-gradient(135deg, rgba(124, 108, 155, 0.45), rgba(41, 41, 82, 0.7)) !important;
+  border: 1px solid rgba(243, 229, 171, 0.5) !important;
+  color: #F3E5AB !important;
+  box-shadow: 0 0 12px rgba(243, 229, 171, 0.2) !important;
+  border-radius: 20px !important;
+}
+
+.ethereal-dialog-close {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1 !important;
+}
+
+.ethereal-dialog-footer {
+  gap: 0.5rem;
+}
