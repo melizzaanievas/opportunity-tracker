@@ -503,3 +503,24 @@ main, .app-container, #root, #app {
 .ethereal-dialog-footer {
   gap: 0.5rem;
 }
+
+.delete-opportunity-button {
+  padding: 6px 13px !important;
+  border-radius: 999px !important;
+  background: rgba(220, 38, 38, 0.15) !important;
+  border: 1px solid rgba(248, 113, 113, 0.5) !important;
+  color: #FCA5A5 !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(248, 113, 113, 0.12) !important;
+}
+
+.delete-opportunity-button:hover {
+  background: rgba(220, 38, 38, 0.24) !important;
+  border-color: rgba(252, 165, 165, 0.8) !important;
+  color: #FFF1F2 !important;
+  box-shadow: 0 0 18px rgba(248, 113, 113, 0.42), 0 0 6px rgba(255, 255, 255, 0.18) !important;
+}

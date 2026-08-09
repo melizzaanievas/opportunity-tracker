@@ -258,14 +258,12 @@ export default function OpportunityDetail() {
             </button>
             <button
               onClick={handleDeleteOpp}
-              className="flex items-center justify-center transition-all duration-200"
-              style={{
-                width: "34px", height: "34px", borderRadius: "999px",
-                background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)",
-                color: "#fca5a5", cursor: "pointer",
-              }}
+              className="delete-opportunity-button flex items-center justify-center gap-1.5 transition-all duration-200"
+              aria-label="Delete opportunity"
+              title="Delete opportunity"
             >
               <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete</span>
             </button>
           </div>
         </div>
