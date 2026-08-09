@@ -134,6 +134,7 @@ export async function runPublicDailySummary(_req: Request, res: Response): Promi
       return;
     }
 
+    res.setHeader("Content-Type", "application/json");
     res.status(200).json({
       success: true,
       message: "Daily summary sent",
