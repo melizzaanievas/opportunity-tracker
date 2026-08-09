@@ -10,7 +10,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -28,7 +28,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="min-h-screen text-foreground flex flex-col">
       <header className="sticky top-0 z-50 w-full border-b bg-card/80 backdrop-blur-md">
         <div className="container mx-auto px-4 max-w-5xl h-16 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2 group">
