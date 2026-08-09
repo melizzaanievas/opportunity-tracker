@@ -108,7 +108,7 @@ router.post("/integrations/telegram/test", requireAuth, async (req, res): Promis
   });
 });
 
-async function runDailySummary(_req: Request, res: Response): Promise<void> {
+async function runAuthenticatedDailySummary(_req: Request, res: Response): Promise<void> {
   const { text, count } = await buildDailySummary();
   let ok = true;
   if (count > 0) {
@@ -121,9 +121,35 @@ async function runDailySummary(_req: Request, res: Response): Promise<void> {
   });
 }
 
+async function runPublicDailySummary(_req: Request, res: Response): Promise<void> {
+  try {
+    const { text } = await buildDailySummary();
+    const sent = await sendTelegramMessage(text);
+
+    if (!sent) {
+      res.status(502).json({
+        success: false,
+        message: "Failed to send daily summary to Telegram",
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Daily summary sent successfully",
+    });
+  } catch (err) {
+    logger.error({ err }, "Public daily summary failed");
+    res.status(500).json({
+      success: false,
+      message: "Failed to generate daily summary",
+    });
+  }
+}
+
 // Public GET endpoint for external cron services.
 // The POST variant below remains protected for dashboard/manual use.
-router.get("/cron-daily-summary", runDailySummary);
-router.post("/cron-daily-summary", requireAuth, runDailySummary);
+router.get("/cron-daily-summary", runPublicDailySummary);
+router.post("/cron-daily-summary", requireAuth, runAuthenticatedDailySummary);
 
 export default router;
