@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, opportunitiesTable } from "../db";
 import { scrapeUrl } from "../lib/scraper";
 import { logger } from "../lib/logger";
+import { buildGoogleCalendarUrl } from "../lib/google-calendar-link";
 
 const router: IRouter = Router();
 
@@ -94,7 +95,14 @@ router.post("/telegram-webhook", async (req, res): Promise<void> => {
 
     // 3. Reply to the user
     const deadlineText = inserted.deadline ? `\n📅 Deadline: <b>${inserted.deadline}</b>` : "";
-    const replyText = `✅ <b>Opportunity saved!</b>\n\n📌 <b>${inserted.title}</b>${deadlineText}\n\n<i>Open your dashboard to view and add tasks.</i>`;
+    const googleCalUrl = buildGoogleCalendarUrl({
+      title: inserted.title,
+      deadline: inserted.deadline,
+      summary: scraped.summary,
+      url,
+    });
+    const calendarLink = `<a href="${googleCalUrl}">📅 Add to Google Calendar</a>`;
+    const replyText = `✅ <b>Opportunity saved!</b>\n\n📌 <b>${inserted.title}</b>${deadlineText}\n\n${calendarLink}\n\n<i>Open your dashboard to view and add tasks.</i>`;
     await sendReply(chatId, replyText, messageId);
   } catch (err) {
     logger.error({ err, url }, "Telegram webhook: failed to save opportunity");

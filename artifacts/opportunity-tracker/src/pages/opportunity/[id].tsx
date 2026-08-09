@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams, Link, useLocation } from "wouter";
-import { addDays, format } from "date-fns";
+import { format } from "date-fns";
 import { 
   useGetOpportunity, 
   useUpdateOpportunity, 
@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { buildGoogleCalendarUrl } from "@/lib/google-calendar-link";
 import { 
   ArrowLeft, 
   Calendar as CalendarIcon, 
@@ -148,20 +149,15 @@ export default function OpportunityDetail() {
   };
 
   const handleCalendar = () => {
-    if (!opp?.deadline) return;
-
-    const startDate = new Date(`${opp.deadline}T00:00:00`);
-    const calendarParams = new URLSearchParams({
-      action: "TEMPLATE",
-      text: opp.title,
-      dates: `${format(startDate, "yyyyMMdd")}/${format(addDays(startDate, 1), "yyyyMMdd")}`,
-      details: [opp.summary, opp.url ? `Link: ${opp.url}` : null]
-        .filter(Boolean)
-        .join("\n\n"),
-    });
+    if (!opp) return;
 
     window.open(
-      `https://calendar.google.com/calendar/render?${calendarParams.toString()}`,
+      buildGoogleCalendarUrl({
+        title: opp.title,
+        deadline: opp.deadline,
+        summary: opp.summary,
+        url: opp.url,
+      }),
       "_blank",
       "noopener,noreferrer",
     );
@@ -311,8 +307,7 @@ export default function OpportunityDetail() {
                   VIEW POSTING
                 </a>
               )}
-              {opp.deadline && (
-                <button
+              <button
                   onClick={handleCalendar}
                   aria-label="Add opportunity to Google Calendar"
                   className="flex items-center gap-1.5 transition-all duration-200"
@@ -325,8 +320,7 @@ export default function OpportunityDetail() {
                 >
                   <CalendarIcon className="w-3.5 h-3.5" />
                   ADD TO CALENDAR
-                </button>
-              )}
+              </button>
             </div>
           </div>
 

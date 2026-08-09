@@ -1,6 +1,7 @@
 import { logger } from "./logger";
 import { db, opportunitiesTable } from "../db";
 import { gte, lte, and, ne } from "drizzle-orm";
+import { buildGoogleCalendarUrl } from "./google-calendar-link";
 
 const TELEGRAM_API = "https://api.telegram.org";
 
@@ -74,7 +75,14 @@ export async function buildDailySummary(): Promise<{ text: string; count: number
     const urgency = daysLeft !== null && daysLeft <= 2 ? "🔴" : daysLeft !== null && daysLeft <= 4 ? "🟡" : "🟢";
     const deadline = opp.deadline ?? "No deadline";
     const daysText = daysLeft !== null ? ` (${daysLeft}d left)` : "";
-    return `${urgency} <b>${opp.title}</b>\n   📅 ${deadline}${daysText} | 📌 ${opp.type} | ${opp.status}\n   🔗 ${opp.url}`;
+    const googleCalUrl = buildGoogleCalendarUrl({
+      title: opp.title,
+      deadline: opp.deadline,
+      summary: opp.summary,
+      url: opp.url,
+    });
+    const calendarLink = `<a href="${googleCalUrl}">📅 Add to Google Calendar</a>`;
+    return `${urgency} <b>${opp.title}</b>\n   📅 ${deadline}${daysText} | 📌 ${opp.type} | ${opp.status}\n   🔗 ${opp.url}\n   ${calendarLink}`;
   });
 
   const text = `🎯 <b>Opportunity Tracker Daily Digest</b>\n<i>${closing.length} deadline(s) in the next 7 days</i>\n\n${lines.join("\n\n")}`;
