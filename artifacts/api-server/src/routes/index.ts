@@ -1,21 +1,29 @@
-import { Router, type IRouter } from "express";
-import healthRouter from "./health";
-import authRouter from "./auth";
-import opportunitiesRouter from "./opportunities";
-import tasksRouter from "./tasks";
-import integrationsRouter from "./integrations";
-import dashboardRouter from "./dashboard";
-import telegramWebhookRouter from "./telegram-webhook";
+import path from "path";
+import fs from "fs";
 
-const router: IRouter = Router();
+// ... your Express routes and API handlers above ...
 
-router.use(healthRouter);
-router.use(authRouter);
-router.use(opportunitiesRouter);
-router.use(tasksRouter);
-router.use(integrationsRouter);
-router.use(dashboardRouter);
-// Telegram webhook — no session auth, called by Telegram's servers
-router.use(telegramWebhookRouter);
+// Serve static frontend assets
+const possibleStaticPaths = [
+  path.resolve(process.cwd(), "dist/public"),
+  path.resolve(process.cwd(), "artifacts/api-server/dist/public"),
+  path.resolve(process.cwd(), "artifacts/opportunity-tracker/dist/public"),
+];
 
-export default router;
+const publicPath = possibleStaticPaths.find((p) => fs.existsSync(p)) || possibleStaticPaths[0];
+
+app.use(express.static(publicPath));
+
+// Fallback catch-all route for SPA (Single Page Application)
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    return next();
+  }
+
+  const indexPath = path.join(publicPath, "index.html");
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send("index.html not found on server");
+  }
+});
