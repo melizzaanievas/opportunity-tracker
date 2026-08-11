@@ -10,10 +10,44 @@ import { runPublicDailySummary } from "./routes/integrations";
 
 const app: Express = express();
 
+// Required for Render reverse proxy HTTPS session cookies
 app.set("trust proxy", 1);
 
 const isProduction = process.env.NODE_ENV === "production";
+const sessionSecret = process.env.SESSION_SECRET || "fallback_secret_for_dev";
 
+// Core logging and middleware
+app.use(
+  pinoHttp({
+    logger,
+    serializers: {
+      req(req) {
+        return {
+          id: req.id,
+          method: req.method,
+          url: req.url?.split("?")[0],
+        };
+      },
+      res(res) {
+        return {
+          statusCode: res.statusCode,
+        };
+      },
+    },
+  }),
+);
+
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  }),
+);
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Session middleware
 app.use(
   session({
     secret: sessionSecret,
@@ -21,7 +55,7 @@ app.use(
     saveUninitialized: false,
     proxy: true,
     cookie: {
-      secure: isProduction, // dynamically sets true on Render (HTTPS)
+      secure: isProduction,
       httpOnly: true,
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
@@ -47,7 +81,7 @@ const staticPath = path.resolve(process.cwd(), "dist/public");
 app.use(express.static(staticPath));
 
 // Catch-all route for frontend (SPA)
-app.get("/*splat", (req, res) => {
+app.get("/*splat", (_req, res) => {
   const indexPath = path.join(staticPath, "index.html");
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
