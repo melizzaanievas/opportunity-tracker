@@ -10,49 +10,20 @@ import { runPublicDailySummary } from "./routes/integrations";
 
 const app: Express = express();
 
-app.use(
-  pinoHttp({
-    logger,
-    serializers: {
-      req(req) {
-        return {
-          id: req.id,
-          method: req.method,
-          url: req.url?.split("?")[0],
-        };
-      },
-      res(res) {
-        return {
-          statusCode: res.statusCode,
-        };
-      },
-    },
-  }),
-);
+app.set("trust proxy", 1);
 
-app.use(
-  cors({
-    origin: true,
-    credentials: true,
-  }),
-);
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-const sessionSecret = process.env.SESSION_SECRET;
-if (!sessionSecret) {
-  throw new Error("SESSION_SECRET must be set");
-}
+const isProduction = process.env.NODE_ENV === "production";
 
 app.use(
   session({
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
+    proxy: true,
     cookie: {
-      secure: false, // set true if behind HTTPS proxy in prod
+      secure: isProduction, // dynamically sets true on Render (HTTPS)
       httpOnly: true,
+      sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     },
   }),
