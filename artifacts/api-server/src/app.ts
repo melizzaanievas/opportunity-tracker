@@ -97,3 +97,5 @@ app.get("/*splat", (_req, res) => {
     res.status(404).send(`Frontend build not found at ${staticPath}`);
   }
 });
+
+export default app;
