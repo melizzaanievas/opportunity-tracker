@@ -76,8 +76,16 @@ app.use("/api", (_req, res) => {
   res.status(404).json({ error: "API route not found" });
 });
 
-// Serve frontend static files
-const staticPath = path.resolve(process.cwd(), "dist/public");
+// Serve frontend static files from possible build output directories
+const possibleStaticPaths = [
+  path.resolve(process.cwd(), "artifacts/opportunity-tracker/dist/public"),
+  path.resolve(process.cwd(), "artifacts/api-server/dist/public"),
+  path.resolve(process.cwd(), "dist/public"),
+];
+
+const staticPath =
+  possibleStaticPaths.find((p) => fs.existsSync(p)) || possibleStaticPaths[0];
+
 app.use(express.static(staticPath));
 
 // Catch-all route for frontend (SPA)
@@ -86,8 +94,6 @@ app.get("/*splat", (_req, res) => {
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
-    res.status(404).send("Frontend build not found");
+    res.status(404).send(`Frontend build not found at ${staticPath}`);
   }
 });
-
-export default app;
