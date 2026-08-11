@@ -76,7 +76,7 @@ const staticPath = path.resolve(process.cwd(), "dist/public");
 app.use(express.static(staticPath));
 
 // Catch-all route for frontend (SPA)
-app.get("*", (req, res) => {
+app.get("/*splat", (req, res) => {
   const indexPath = path.join(staticPath, "index.html");
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
