@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
-import router from "./routes";
+import { router } from "./routes";
 import { logger } from "./lib/logger";
 import { runPublicDailySummary } from "./routes/integrations";
 
