@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
-import { router } from "./routes";
+import router from "./routes";
 import { logger } from "./lib/logger";
 import { runPublicDailySummary } from "./routes/integrations";
 
@@ -67,6 +67,23 @@ app.use("/api", router);
 // browser-rendered frontend 404 page.
 app.use("/api", (_req, res) => {
   res.status(404).json({ error: "API route not found" });
+});
+import express from "express";
+import path from "path";
+import fs from "fs";
+
+// Serve frontend static files
+const staticPath = path.resolve(process.cwd(), "dist/public");
+app.use(express.static(staticPath));
+
+// Catch-all route for frontend (SPA)
+app.get("*", (req, res) => {
+  const indexPath = path.join(staticPath, "index.html");
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send("Frontend build not found");
+  }
 });
 
 export default app;
