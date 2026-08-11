@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
+import * as integrations from "./integrations.js";
 
 export const router = Router();
 
@@ -11,10 +12,9 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
 }
 
 // -------------------------------------------------------------
-// PUBLIC AUTH ROUTES (Matching frontend endpoints)
+// PUBLIC AUTH ROUTES
 // -------------------------------------------------------------
 
-// Check auth status (/api/auth/me)
 router.get("/auth/me", (req, res) => {
   if ((req.session as any)?.authenticated) {
     return res.json({ authenticated: true });
@@ -22,7 +22,6 @@ router.get("/auth/me", (req, res) => {
   return res.status(401).json({ authenticated: false, error: "Not logged in" });
 });
 
-// Login (/api/auth/login)
 router.post("/auth/login", (req, res) => {
   const { password } = req.body;
   const appPassword = process.env.APP_PASSWORD;
@@ -40,7 +39,6 @@ router.post("/auth/login", (req, res) => {
   return res.status(401).json({ error: "Invalid password" });
 });
 
-// Logout (/api/auth/logout)
 router.post("/auth/logout", (req, res) => {
   req.session.destroy(() => {
     res.json({ success: true });
@@ -48,8 +46,15 @@ router.post("/auth/logout", (req, res) => {
 });
 
 // -------------------------------------------------------------
-// PROTECTED ROUTES
+// PROTECTED API ROUTES
 // -------------------------------------------------------------
 router.use(requireAuth);
+
+// Attach Telegram / Integration endpoints
+if ((integrations as any).router) {
+  router.use("/integrations", (integrations as any).router);
+} else if ((integrations as any).default) {
+  router.use("/integrations", (integrations as any).default);
+}
 
 export default router;
