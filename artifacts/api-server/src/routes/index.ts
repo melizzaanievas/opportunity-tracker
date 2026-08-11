@@ -27,10 +27,12 @@ router.post("/login", (req, res) => {
   const { password } = req.body;
   const appPassword = process.env.APP_PASSWORD;
 
-  if (password && appPassword && password === appPassword) {
+  // Debug logging for Render console
+  console.log("Submitted password:", password);
+  console.log("APP_PASSWORD set in env:", appPassword ? "YES" : "NO (MISSING)");
+
+  if (password && appPassword && password.trim() === appPassword.trim()) {
     (req.session as any).authenticated = true;
-    
-    // Explicitly save session before returning response
     return req.session.save((err) => {
       if (err) {
         return res.status(500).json({ error: "Failed to save session" });
