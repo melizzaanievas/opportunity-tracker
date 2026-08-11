@@ -3,6 +3,10 @@ import { requireAuth } from "../auth.js";
 
 export const router = Router();
 
+// -------------------------------------------------------------
+// UNPROTECTED / PUBLIC ROUTES (Must be placed before requireAuth)
+// -------------------------------------------------------------
+
 // Endpoint for checking auth status
 router.get("/auth/status", (req, res) => {
   if ((req.session as any)?.authenticated) {
@@ -16,7 +20,7 @@ router.post("/login", (req, res) => {
   const { password } = req.body;
   const appPassword = process.env.APP_PASSWORD;
 
-  if (password && password === appPassword) {
+  if (password && appPassword && password === appPassword) {
     (req.session as any).authenticated = true;
     return res.json({ success: true });
   }
@@ -30,5 +34,13 @@ router.post("/logout", (req, res) => {
     res.json({ success: true });
   });
 });
+
+// -------------------------------------------------------------
+// PROTECTED ROUTES MIDDLEWARE
+// -------------------------------------------------------------
+// Any route defined below this line will require an authenticated session
+router.use(requireAuth);
+
+// Register your protected endpoints here (e.g. router.get("/opportunities", ...))
 
 export default router;
