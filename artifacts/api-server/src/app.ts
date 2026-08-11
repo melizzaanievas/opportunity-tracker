@@ -63,20 +63,15 @@ app.use(
   }),
 );
 
-// Keep the cron endpoint at the Express app level and before all other API
-// routing so external cron services never reach a frontend catch-all.
+// Cron endpoints
 app.get("/cron-daily-summary", runPublicDailySummary);
 app.get("/api/cron-daily-summary", runPublicDailySummary);
 
-app.use("/api", (routes as any).default || (routes as any).router || routes);
+// Mount API routes
+const routerHandler = (routes as any).default || (routes as any).router || routes;
+app.use("/api", routerHandler);
 
-// API paths must always receive an API response. Never fall through to a
-// browser-rendered frontend 404 page.
-app.use("/api", (_req, res) => {
-  res.status(404).json({ error: "API route not found" });
-});
-
-// Serve frontend static files from possible build output directories
+// Serve frontend static files
 const possibleStaticPaths = [
   path.resolve(process.cwd(), "artifacts/opportunity-tracker/dist/public"),
   path.resolve(process.cwd(), "artifacts/api-server/dist/public"),
@@ -88,13 +83,17 @@ const staticPath =
 
 app.use(express.static(staticPath));
 
-// Catch-all route for frontend (SPA)
-app.get("/*splat", (_req, res) => {
+// Fallback catch-all route for Single Page Application (React/Vite)
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    return res.status(404).json({ error: "API route not found" });
+  }
+
   const indexPath = path.join(staticPath, "index.html");
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
-    res.status(404).send(`Frontend build not found at ${staticPath}`);
+    res.status(404).send("Frontend build not found");
   }
 });
 
