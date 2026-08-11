@@ -29,7 +29,14 @@ router.post("/login", (req, res) => {
 
   if (password && appPassword && password === appPassword) {
     (req.session as any).authenticated = true;
-    return res.json({ success: true });
+    
+    // Explicitly save session before returning response
+    return req.session.save((err) => {
+      if (err) {
+        return res.status(500).json({ error: "Failed to save session" });
+      }
+      return res.json({ success: true });
+    });
   }
 
   return res.status(401).json({ error: "Invalid password" });
