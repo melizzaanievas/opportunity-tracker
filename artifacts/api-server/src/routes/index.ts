@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
-import * as integrations from "./integrations.js";
-import * as opportunities from "./opportunities.js";
+import * as integrationsModule from "./integrations.js";
+import * as opportunitiesModule from "./opportunities.js";
 
 export const router = Router();
 
@@ -51,12 +51,11 @@ router.post("/auth/logout", (req, res) => {
 // -------------------------------------------------------------
 router.use(requireAuth);
 
-// Mount Opportunities endpoints (/api/opportunities)
-const oppsHandler = (opportunities as any).default || (opportunities as any).router || opportunities;
-router.use("/opportunities", oppsHandler);
+// Resolve router handlers safely for ESM
+const oppsHandler = (opportunitiesModule as any).default || (opportunitiesModule as any).router || opportunitiesModule;
+const integrationsHandler = (integrationsModule as any).default || (integrationsModule as any).router || integrationsModule;
 
-// Mount Integrations endpoints (/api/integrations)
-const integrationsHandler = (integrations as any).default || (integrations as any).router || integrations;
+router.use("/opportunities", oppsHandler);
 router.use("/integrations", integrationsHandler);
 
 export default router;
