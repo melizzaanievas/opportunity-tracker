@@ -356,6 +356,10 @@ importers:
         version: 3.25.76
 
   artifacts/opportunity-tracker:
+    dependencies:
+      driver.js:
+        specifier: ^1.8.0
+        version: 1.8.0
     devDependencies:
       '@hookform/resolvers':
         specifier: ^3.10.0
@@ -2823,6 +2827,9 @@ packages:
 
   domutils@3.2.2:
     resolution: {integrity: sha512-6kZKyUajlDuqlHKVX1w7gyslj9MPIXzIFiz/rGu35uC1wMi+kMhQwGhl4lt9unC9Vb9INnY9Z3/ZA3+FhASLaw==}
+
+  driver.js@1.8.0:
+    resolution: {integrity: sha512-+8/IO7h1v14IzWh2GP60N7T3PFZweXwdn5e5POuxRSBoCYUojsBxzqawPeXh3YZIibRy7EehYNEyxe7slwwtdg==}
 
   drizzle-kit@0.31.10:
     resolution: {integrity: sha512-7OZcmQUrdGI+DUNNsKBn1aW8qSoKuTH7d0mYgSP8bAzdFzKoovxEFnoGQp2dVs82EOJeYycqRtciopszwUf8bw==}
@@ -6197,6 +6204,8 @@ snapshots:
       dom-serializer: 2.0.0
       domelementtype: 2.3.0
       domhandler: 5.0.3
+
+  driver.js@1.8.0: {}
 
   drizzle-kit@0.31.10:
     dependencies:

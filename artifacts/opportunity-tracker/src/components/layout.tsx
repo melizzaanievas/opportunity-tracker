@@ -8,10 +8,12 @@ export function AppLayout({
   children,
   showAddOpportunity = false,
   headerActions,
+  onTakeTour,
 }: {
   children: React.ReactNode;
   showAddOpportunity?: boolean;
   headerActions?: React.ReactNode;
+  onTakeTour?: () => void;
 }) {
   const [, setLocation] = useLocation();
   const { data: auth, isLoading } = useGetAuthMe();
@@ -85,10 +87,22 @@ export function AppLayout({
                 href="/add"
                 className="app-nav-add-button inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-md transition-all hover:bg-indigo-500"
                 data-testid="link-nav-add-opportunity"
+                data-tour="add-btn"
               >
                 <Plus className="h-4 w-4" strokeWidth={2.5} />
                 Add Opportunity
               </Link>
+            )}
+
+            {onTakeTour && (
+              <button
+                type="button"
+                onClick={onTakeTour}
+                className="dashboard-tour-button hidden sm:inline-flex"
+                data-testid="button-take-tour"
+              >
+                ✨ Take Tour
+              </button>
             )}
 
             {/* Sign out — sans-serif */}

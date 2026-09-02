@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { differenceInCalendarDays, format } from "date-fns";
+import { driver } from "driver.js";
+import "driver.js/dist/driver.css";
 import {
   getGetDashboardStatsQueryKey,
   getListOpportunitiesQueryKey,
@@ -348,6 +350,71 @@ export default function Dashboard() {
     ? Math.max(0, stats.total - stats.byStatus.archived)
     : 0;
 
+  const handleTakeTour = () => {
+    const tourSteps = [
+      {
+        element: '[data-tour="add-btn"]',
+        popover: {
+          title: "Add an opportunity",
+          description:
+            "Save a job, grant, casting call, or competition here so it stays visible in your pipeline.",
+          side: "bottom" as const,
+          align: "end" as const,
+        },
+      },
+      {
+        element: '[data-tour="metrics"]',
+        popover: {
+          title: "Your quick metrics",
+          description:
+            "Use these totals as shortcuts. Select a metric to filter the pipeline by deadlines or stage.",
+          side: "bottom" as const,
+          align: "start" as const,
+        },
+      },
+      {
+        element: '[data-tour="view-switcher"]',
+        popover: {
+          title: "Switch views",
+          description:
+            "Move between Grid, Kanban, Calendar, and Analytics to see your opportunities in the format that fits the task.",
+          side: "bottom" as const,
+          align: "end" as const,
+        },
+      },
+      {
+        element: '[data-tour="filters"]',
+        popover: {
+          title: "Filter by stage",
+          description:
+            "Narrow the pipeline to All, To Apply, Applied, Interviewing, Offered, or Archived opportunities.",
+          side: "bottom" as const,
+          align: "start" as const,
+        },
+      },
+      {
+        element: '[data-tour="card"]',
+        popover: {
+          title: "Your opportunity cards",
+          description:
+            "Review each opportunity's deadline and status, track Action Plan items, and open the saved posting or full details.",
+          side: "top" as const,
+          align: "start" as const,
+        },
+      },
+    ].filter(({ element }) => document.querySelector(element));
+
+    const driverObj = driver({
+      showProgress: true,
+      animate: true,
+      allowClose: true,
+      popoverClass: "dashboard-tour-popover",
+      steps: tourSteps,
+    });
+
+    driverObj.drive();
+  };
+
   const handleSummaryFilter = (
     filter: Exclude<DashboardSummaryFilter, "none">,
   ) => {
@@ -415,6 +482,7 @@ export default function Dashboard() {
         key={opp.id}
         className="dashboard-opportunity-card group relative flex min-h-64 flex-col overflow-hidden rounded-2xl"
         data-testid={`card-opportunity-${opp.id}`}
+        data-tour={opp.id === opportunities?.[0]?.id ? "card" : undefined}
       >
         <Link
           href={`/opportunity/${opp.id}`}
@@ -530,6 +598,7 @@ export default function Dashboard() {
       className="dashboard-view-toggle"
       role="tablist"
       aria-label="Choose dashboard view"
+      data-tour="view-switcher"
     >
       {VIEW_MODES.map(({ value, label, icon: Icon }) => {
         const active = viewMode === value;
@@ -560,6 +629,7 @@ export default function Dashboard() {
   return (
     <AppLayout
       showAddOpportunity
+      onTakeTour={handleTakeTour}
       headerActions={
         <button
           onClick={handleTestAlert}
@@ -628,6 +698,7 @@ export default function Dashboard() {
               className="dashboard-stage-filters"
               role="tablist"
               aria-label="Filter opportunities by status"
+              data-tour="filters"
             >
               {FILTERS.map(({ value, label }) => {
                 const active = statusFilter === value;
@@ -822,13 +893,19 @@ export default function Dashboard() {
           {viewMode !== "analytics" && (
             <>
         {statsLoading ? (
-          <div className="grid grid-cols-2 gap-3 my-4 md:grid-cols-4">
+          <div
+            className="grid grid-cols-2 gap-3 my-4 md:grid-cols-4"
+            data-tour="metrics"
+          >
             {[1, 2, 3, 4].map((item) => (
               <div key={item} className="dashboard-stat-card h-[60px] animate-pulse" />
             ))}
           </div>
         ) : stats ? (
-          <div className="grid grid-cols-2 gap-3 my-4 md:grid-cols-4">
+          <div
+            className="grid grid-cols-2 gap-3 my-4 md:grid-cols-4"
+            data-tour="metrics"
+          >
             <button
               type="button"
               className={`dashboard-stat-card cursor-pointer transition-all hover:border-indigo-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
