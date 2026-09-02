@@ -177,4 +177,52 @@ describe("save-flow metadata wiring", () => {
       assert.equal(replies[0]?.replyToMessageId, 42);
     });
   });
+
+  it("ignores valid URLs from an unauthorized Telegram chat", async () => {
+    process.env.TELEGRAM_CHAT_ID = TELEGRAM_CHAT_ID;
+    let validateCalls = 0;
+    let scrapeCalls = 0;
+    let replyCalls = 0;
+    const app = authenticatedApp(
+      createTelegramWebhookRouter({
+        validateScrapeUrl: async (url) => {
+          validateCalls += 1;
+          return new URL(url);
+        },
+        scrapeUrl: async () => {
+          scrapeCalls += 1;
+          throw new Error("Scraper should not be called");
+        },
+        sendReply: async () => {
+          replyCalls += 1;
+        },
+      }),
+    );
+
+    await withServer(app, async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/telegram-webhook`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          update_id: 2,
+          message: {
+            message_id: 43,
+            chat: { id: "unauthorized-chat" },
+            text: `Please save this opportunity: ${TELEGRAM_URL}`,
+          },
+        }),
+      });
+
+      assert.equal(response.status, 200);
+      assert.equal(validateCalls, 0);
+      assert.equal(scrapeCalls, 0);
+      assert.equal(replyCalls, 0);
+
+      const [inserted] = await db
+        .select({ id: opportunitiesTable.id })
+        .from(opportunitiesTable)
+        .where(eq(opportunitiesTable.url, TELEGRAM_URL));
+      assert.equal(inserted, undefined);
+    });
+  });
 });
