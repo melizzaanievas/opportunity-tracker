@@ -416,13 +416,11 @@ export default function Dashboard() {
           <span className="sr-only">View opportunity details</span>
         </Link>
 
-        <div className="relative z-10 flex flex-1 flex-col p-5 pointer-events-none">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="dashboard-type-icon">
-                <Icon className="h-5 w-5" />
-              </div>
-              <span className="dashboard-type-label">{CATEGORY_LABELS[opp.type]}</span>
+        <div className="relative z-10 flex min-w-0 flex-1 flex-col p-5 pointer-events-none">
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="dashboard-primary-category-badge">
+              <Icon className="h-4 w-4" />
+              <span>{CATEGORY_LABELS[opp.type]}</span>
             </div>
             <div className="pointer-events-auto">{renderDeadlineBadge(opp.deadline)}</div>
           </div>
@@ -435,17 +433,17 @@ export default function Dashboard() {
             {opp.title}
           </Link>
 
-          {opp.summary && (
-            <p className="dashboard-card-copy mt-3 line-clamp-2">{opp.summary}</p>
-          )}
+          <p className="dashboard-card-copy mt-3 line-clamp-2">
+            {opp.summary || ""}
+          </p>
 
-          <div className="mt-auto flex items-end justify-between gap-3 pt-6">
+          <div className="dashboard-card-footer mt-auto flex items-end justify-between gap-3 pt-6">
             <span className={`dashboard-status-badge ${statusConf.badgeClass}`}>
               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: statusConf.dot }} />
               {statusConf.label}
             </span>
 
-            <div className="flex items-center gap-3">
+            <div className="dashboard-card-actions flex items-center gap-3">
               {opp.taskCount !== undefined && opp.taskCount > 0 && (
                 <span className="dashboard-task-count">
                   <CheckCircle2 className="h-3.5 w-3.5" />
@@ -458,10 +456,11 @@ export default function Dashboard() {
                 rel="noopener noreferrer"
                 className="dashboard-external-link pointer-events-auto"
                 aria-label={`Open saved link for ${opp.title}`}
-                title="Open saved link"
+                title="View Posting"
                 data-testid={`link-external-opportunity-${opp.id}`}
               >
                 <ExternalLink className="h-4 w-4" />
+                <span>View Posting</span>
               </a>
             </div>
           </div>
@@ -528,6 +527,11 @@ export default function Dashboard() {
                   </h2>
                 </div>
               </div>
+              <Link href="/add" className="dashboard-banner-action">
+                <Plus className="h-4 w-4" strokeWidth={2.5} />
+                Add Opportunity
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
             </div>
             <div className="dashboard-quote-block">
               <p className="dashboard-quote-label">Today&apos;s motivation</p>
@@ -558,23 +562,19 @@ export default function Dashboard() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Link href="/add" className="dashboard-add-button">
-              <Plus className="h-4 w-4" strokeWidth={2.5} />
-              Add Opportunity
-              <ArrowUpRight className="h-4 w-4" />
-            </Link>
+          <div className="flex items-center justify-end">
             <button
               onClick={handleTestAlert}
               disabled={testTelegram.isPending}
-              className="dashboard-secondary-button"
+              className="dashboard-ghost-icon-button"
+              aria-label="Send test Telegram alert"
+              title="Send test Telegram alert"
             >
               {testTelegram.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Send className="h-4 w-4" />
               )}
-              Test Alert
             </button>
           </div>
         </section>
@@ -595,7 +595,11 @@ export default function Dashboard() {
                   role="tab"
                   aria-selected={active}
                   aria-controls={`dashboard-view-${value}`}
-                  className={`dashboard-view-button ${active ? "is-active" : ""}`}
+                  className={`dashboard-view-button ${
+                    active
+                      ? "is-active bg-indigo-600 text-white"
+                      : "text-slate-400 hover:text-white"
+                  }`}
                   onClick={() => setViewMode(value)}
                   data-testid={`button-view-${value}`}
                 >
