@@ -420,6 +420,62 @@ export function resolveOpportunityTitle(
   return title ?? getHostname(url) ?? "Untitled Opportunity";
 }
 
+export function parseScrapedHtml(url: string, html: string): ScrapedResult {
+  const $ = cheerio.load(html);
+
+  // Title candidates are cleaned and resolved after the deadline is known,
+  // because platform fallback titles can include a short deadline date.
+  const ogTitle = $('meta[property="og:title"]').attr("content");
+  const twitterTitle = $('meta[name="twitter:title"]').attr("content");
+  const htmlTitle = $("title").text();
+  const h1 = $("h1").first().text();
+  const pageTitle = selectPageTitle(url, [ogTitle, twitterTitle, htmlTitle, h1]);
+
+  // Remove noise before extracting body text so navigation dates and
+  // unrelated footer timestamps do not become the opportunity deadline.
+  $("script, style, nav, footer, header").remove();
+
+  // Summary
+  const ogDesc = $('meta[property="og:description"]').attr("content");
+  const metaDesc = $('meta[name="description"]').attr("content");
+  const firstPara = $("article p, main p, .content p, p").first().text();
+  const summary = selectSummary([ogDesc, metaDesc, firstPara]);
+
+  // Prefer explicit deadline metadata and <time> values, then inspect the
+  // visible page text for labeled or standalone date patterns.
+  const bodyText = $("body").text();
+  const deadlineMetadata = [
+    $('meta[property="og:deadline"]').attr("content"),
+    $('meta[name="deadline"]').attr("content"),
+    $('meta[name="applicationDeadline"]').attr("content"),
+    $('meta[itemprop="deadline"]').attr("content"),
+    $('meta[itemprop="applicationDeadline"]').attr("content"),
+    $("time[datetime]").first().attr("datetime"),
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join(" ");
+  const deadline = extractDate(deadlineMetadata) ?? extractDate(bodyText);
+  const title = resolveOpportunityTitle(url, pageTitle, deadline);
+
+  // Key action steps from lists
+  const listItems: string[] = [];
+  $("ul li, ol li").each((_, el) => {
+    const text = cleanText($(el).text());
+    if (text.length > 10 && text.length < 200) {
+      listItems.push(`• ${text}`);
+    }
+  });
+  const keyActionSteps = listItems.slice(0, 8).join("\n") || null;
+
+  return {
+    title: title || null,
+    deadline,
+    summary,
+    keyActionSteps,
+    scrapeSuccess: !!(title || summary),
+  };
+}
+
 function toIsoDate(year: number, month: number, day: number): string | null {
   const parsed = new Date(Date.UTC(year, month - 1, day));
   if (
@@ -525,59 +581,7 @@ export async function scrapeUrl(url: string): Promise<ScrapedResult> {
     }
 
     const html = await res.text();
-    const $ = cheerio.load(html);
-
-    // Title candidates are cleaned and resolved after the deadline is known,
-    // because platform fallback titles can include a short deadline date.
-    const ogTitle = $('meta[property="og:title"]').attr("content");
-    const twitterTitle = $('meta[name="twitter:title"]').attr("content");
-    const htmlTitle = $("title").text();
-    const h1 = $("h1").first().text();
-    const pageTitle = selectPageTitle(initialUrl.href, [ogTitle, twitterTitle, htmlTitle, h1]);
-
-    // Remove noise before extracting body text so navigation dates and
-    // unrelated footer timestamps do not become the opportunity deadline.
-    $("script, style, nav, footer, header").remove();
-
-    // Summary
-    const ogDesc = $('meta[property="og:description"]').attr("content");
-    const metaDesc = $('meta[name="description"]').attr("content");
-    const firstPara = $("article p, main p, .content p, p").first().text();
-    const summary = selectSummary([ogDesc, metaDesc, firstPara]);
-
-    // Prefer explicit deadline metadata and <time> values, then inspect the
-    // visible page text for labeled or standalone date patterns.
-    const bodyText = $("body").text();
-    const deadlineMetadata = [
-      $('meta[property="og:deadline"]').attr("content"),
-      $('meta[name="deadline"]').attr("content"),
-      $('meta[name="applicationDeadline"]').attr("content"),
-      $('meta[itemprop="deadline"]').attr("content"),
-      $('meta[itemprop="applicationDeadline"]').attr("content"),
-      $("time[datetime]").first().attr("datetime"),
-    ]
-      .filter((value): value is string => Boolean(value))
-      .join(" ");
-    const deadline = extractDate(deadlineMetadata) ?? extractDate(bodyText);
-    const title = resolveOpportunityTitle(initialUrl.href, pageTitle, deadline);
-
-    // Key action steps from lists
-    const listItems: string[] = [];
-    $("ul li, ol li").each((_, el) => {
-      const text = cleanText($(el).text());
-      if (text.length > 10 && text.length < 200) {
-        listItems.push(`• ${text}`);
-      }
-    });
-    const keyActionSteps = listItems.slice(0, 8).join("\n") || null;
-
-    return {
-      title: title || null,
-      deadline,
-      summary,
-      keyActionSteps,
-      scrapeSuccess: !!(title || summary),
-    };
+    return parseScrapedHtml(initialUrl.href, html);
   } catch (err) {
     if (err instanceof UnsafeScrapeUrlError) {
       throw err;

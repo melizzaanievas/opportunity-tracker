@@ -1,3 +1,4 @@
 - [API routing boundary](api-routing-boundary.md) — Keep public automation endpoints at the Express app boundary before API routing and frontend rewrites.
 - [Artifact build variables](artifact-build-variables.md) — Standalone Vite builds require each artifact's configured PORT and BASE_PATH environment variables.
 - [GitHub branch update behavior](github-branch-update.md) — Existing branches may need an authenticated ref update when the push helper reports BRANCH_ALREADY_EXISTS.
+- [TypeScript source tests](typescript-source-tests.md) — Use the workspace tsx runner for API source tests because native Node ESM misses extensionless imports.
