@@ -5,13 +5,24 @@
  * Opportunity Tracker API specification
  * OpenAPI spec version: 0.1.0
  */
-export type HealthStatusTelegramWebhookStatus = typeof HealthStatusTelegramWebhookStatus[keyof typeof HealthStatusTelegramWebhookStatus];
-
+export type HealthStatusTelegramWebhookStatus =
+  (typeof HealthStatusTelegramWebhookStatus)[keyof typeof HealthStatusTelegramWebhookStatus];
 
 export const HealthStatusTelegramWebhookStatus = {
-  pending: 'pending',
-  successful: 'successful',
-  failed: 'failed',
+  pending: "pending",
+  successful: "successful",
+  failed: "failed",
+} as const;
+
+export type HealthStatusTelegramWebhookLiveStatus =
+  (typeof HealthStatusTelegramWebhookLiveStatus)[keyof typeof HealthStatusTelegramWebhookLiveStatus];
+
+export const HealthStatusTelegramWebhookLiveStatus = {
+  unknown: "unknown",
+  matching: "matching",
+  out_of_band: "out_of_band",
+  stale: "stale",
+  unavailable: "unavailable",
 } as const;
 
 export type HealthStatusTelegramWebhook = {
@@ -20,6 +31,12 @@ export type HealthStatusTelegramWebhook = {
   webhookUrl: string | null;
   /** @nullable */
   description: string | null;
+  liveStatus?: HealthStatusTelegramWebhookLiveStatus;
+  /** @nullable */
+  liveWebhookUrl?: string | null;
+  /** @nullable */
+  liveDescription?: string | null;
+  secretTokenConfigured?: boolean;
 };
 
 export interface HealthStatus {
@@ -40,7 +57,7 @@ export interface AuthStatus {
 }
 
 export type DashboardStatsByStatus = {
-  'to-apply': number;
+  "to-apply": number;
   applied: number;
   interviewing: number;
   offered: number;
@@ -51,8 +68,8 @@ export type DashboardStatsByType = {
   job: number;
   grant: number;
   casting: number;
-  'singing-competition': number;
-  'grant-fellowship': number;
+  "singing-competition": number;
+  "grant-fellowship": number;
   other: number;
 };
 
@@ -63,27 +80,27 @@ export interface DashboardStats {
   byType: DashboardStatsByType;
 }
 
-export type OpportunityType = typeof OpportunityType[keyof typeof OpportunityType];
-
+export type OpportunityType =
+  (typeof OpportunityType)[keyof typeof OpportunityType];
 
 export const OpportunityType = {
-  job: 'job',
-  grant: 'grant',
-  casting: 'casting',
-  'singing-competition': 'singing-competition',
-  'grant-fellowship': 'grant-fellowship',
-  other: 'other',
+  job: "job",
+  grant: "grant",
+  casting: "casting",
+  "singing-competition": "singing-competition",
+  "grant-fellowship": "grant-fellowship",
+  other: "other",
 } as const;
 
-export type OpportunityStatus = typeof OpportunityStatus[keyof typeof OpportunityStatus];
-
+export type OpportunityStatus =
+  (typeof OpportunityStatus)[keyof typeof OpportunityStatus];
 
 export const OpportunityStatus = {
-  'to-apply': 'to-apply',
-  applied: 'applied',
-  interviewing: 'interviewing',
-  offered: 'offered',
-  archived: 'archived',
+  "to-apply": "to-apply",
+  applied: "applied",
+  interviewing: "interviewing",
+  offered: "offered",
+  archived: "archived",
 } as const;
 
 export interface Opportunity {
@@ -95,9 +112,9 @@ export interface Opportunity {
   type: OpportunityType;
   status: OpportunityStatus;
   /**
-     * ISO date string YYYY-MM-DD
-     * @nullable
-     */
+   * ISO date string YYYY-MM-DD
+   * @nullable
+   */
   deadline?: string | null;
   /** @nullable */
   summary?: string | null;
@@ -108,27 +125,27 @@ export interface Opportunity {
   completedTaskCount?: number;
 }
 
-export type OpportunityInputType = typeof OpportunityInputType[keyof typeof OpportunityInputType];
-
+export type OpportunityInputType =
+  (typeof OpportunityInputType)[keyof typeof OpportunityInputType];
 
 export const OpportunityInputType = {
-  job: 'job',
-  grant: 'grant',
-  casting: 'casting',
-  'singing-competition': 'singing-competition',
-  'grant-fellowship': 'grant-fellowship',
-  other: 'other',
+  job: "job",
+  grant: "grant",
+  casting: "casting",
+  "singing-competition": "singing-competition",
+  "grant-fellowship": "grant-fellowship",
+  other: "other",
 } as const;
 
-export type OpportunityInputStatus = typeof OpportunityInputStatus[keyof typeof OpportunityInputStatus];
-
+export type OpportunityInputStatus =
+  (typeof OpportunityInputStatus)[keyof typeof OpportunityInputStatus];
 
 export const OpportunityInputStatus = {
-  'to-apply': 'to-apply',
-  applied: 'applied',
-  interviewing: 'interviewing',
-  offered: 'offered',
-  archived: 'archived',
+  "to-apply": "to-apply",
+  applied: "applied",
+  interviewing: "interviewing",
+  offered: "offered",
+  archived: "archived",
 } as const;
 
 export interface OpportunityInput {
@@ -142,33 +159,33 @@ export interface OpportunityInput {
   summary?: string;
   keyActionSteps?: string;
   /**
-     * @maxItems 20
-     * @items.minLength 1
-     */
+   * @maxItems 20
+   * @items.minLength 1
+   */
   actionPlanTasks?: string[];
 }
 
-export type OpportunityPatchType = typeof OpportunityPatchType[keyof typeof OpportunityPatchType];
-
+export type OpportunityPatchType =
+  (typeof OpportunityPatchType)[keyof typeof OpportunityPatchType];
 
 export const OpportunityPatchType = {
-  job: 'job',
-  grant: 'grant',
-  casting: 'casting',
-  'singing-competition': 'singing-competition',
-  'grant-fellowship': 'grant-fellowship',
-  other: 'other',
+  job: "job",
+  grant: "grant",
+  casting: "casting",
+  "singing-competition": "singing-competition",
+  "grant-fellowship": "grant-fellowship",
+  other: "other",
 } as const;
 
-export type OpportunityPatchStatus = typeof OpportunityPatchStatus[keyof typeof OpportunityPatchStatus];
-
+export type OpportunityPatchStatus =
+  (typeof OpportunityPatchStatus)[keyof typeof OpportunityPatchStatus];
 
 export const OpportunityPatchStatus = {
-  'to-apply': 'to-apply',
-  applied: 'applied',
-  interviewing: 'interviewing',
-  offered: 'offered',
-  archived: 'archived',
+  "to-apply": "to-apply",
+  applied: "applied",
+  interviewing: "interviewing",
+  offered: "offered",
+  archived: "archived",
 } as const;
 
 export interface OpportunityPatch {
@@ -188,16 +205,16 @@ export interface ScrapeRequest {
   url: string;
 }
 
-export type ScrapedDataType = typeof ScrapedDataType[keyof typeof ScrapedDataType];
-
+export type ScrapedDataType =
+  (typeof ScrapedDataType)[keyof typeof ScrapedDataType];
 
 export const ScrapedDataType = {
-  job: 'job',
-  grant: 'grant',
-  casting: 'casting',
-  'singing-competition': 'singing-competition',
-  'grant-fellowship': 'grant-fellowship',
-  other: 'other',
+  job: "job",
+  grant: "grant",
+  casting: "casting",
+  "singing-competition": "singing-competition",
+  "grant-fellowship": "grant-fellowship",
+  other: "other",
 } as const;
 
 export interface ScrapedData {
@@ -224,22 +241,22 @@ export interface Preferences {
 
 export interface PreferencesInput {
   /**
-     * @maxItems 20
-     * @items.minLength 1
-     * @items.maxLength 100
-     */
+   * @maxItems 20
+   * @items.minLength 1
+   * @items.maxLength 100
+   */
   targetTitles: string[];
   /**
-     * @maxItems 20
-     * @items.minLength 1
-     * @items.maxLength 100
-     */
+   * @maxItems 20
+   * @items.minLength 1
+   * @items.maxLength 100
+   */
   preferredLocations: string[];
   /**
-     * @maxItems 10
-     * @items.minLength 1
-     * @items.maxLength 50
-     */
+   * @maxItems 10
+   * @items.minLength 1
+   * @items.maxLength 50
+   */
   preferredJobTypes: string[];
 }
 
@@ -251,7 +268,9 @@ export interface ScoutResult {
   skipped: number;
 }
 
-export interface TelegramWebhookPayload { [key: string]: unknown }
+export interface TelegramWebhookPayload {
+  [key: string]: unknown;
+}
 
 export interface Task {
   id: number;
@@ -288,42 +307,41 @@ export interface TelegramResult {
 }
 
 export type ListOpportunitiesParams = {
-/**
- * Filter by status
- */
-status?: ListOpportunitiesStatus;
-/**
- * Filter by type
- */
-type?: ListOpportunitiesType;
+  /**
+   * Filter by status
+   */
+  status?: ListOpportunitiesStatus;
+  /**
+   * Filter by type
+   */
+  type?: ListOpportunitiesType;
 };
 
-export type ListOpportunitiesStatus = typeof ListOpportunitiesStatus[keyof typeof ListOpportunitiesStatus];
-
+export type ListOpportunitiesStatus =
+  (typeof ListOpportunitiesStatus)[keyof typeof ListOpportunitiesStatus];
 
 export const ListOpportunitiesStatus = {
-  'to-apply': 'to-apply',
-  applied: 'applied',
-  interviewing: 'interviewing',
-  offered: 'offered',
-  archived: 'archived',
+  "to-apply": "to-apply",
+  applied: "applied",
+  interviewing: "interviewing",
+  offered: "offered",
+  archived: "archived",
 } as const;
 
-export type ListOpportunitiesType = typeof ListOpportunitiesType[keyof typeof ListOpportunitiesType];
-
+export type ListOpportunitiesType =
+  (typeof ListOpportunitiesType)[keyof typeof ListOpportunitiesType];
 
 export const ListOpportunitiesType = {
-  job: 'job',
-  grant: 'grant',
-  casting: 'casting',
-  'singing-competition': 'singing-competition',
-  'grant-fellowship': 'grant-fellowship',
-  other: 'other',
+  job: "job",
+  grant: "grant",
+  casting: "casting",
+  "singing-competition": "singing-competition",
+  "grant-fellowship": "grant-fellowship",
+  other: "other",
 } as const;
 
 export type GoogleOAuthCallbackParams = {
-code?: string;
-state?: string;
-error?: string;
+  code?: string;
+  state?: string;
+  error?: string;
 };
-

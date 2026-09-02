@@ -21,10 +21,17 @@ const TELEGRAM_WEBHOOK_RETRY_DELAY_MS = 250;
 export type TelegramWebhookRegistrationStatus =
   "pending" | "successful" | "failed";
 
+export type TelegramWebhookLiveStatus =
+  "unknown" | "matching" | "out_of_band" | "stale" | "unavailable";
+
 export interface TelegramWebhookReadiness {
   status: TelegramWebhookRegistrationStatus;
   webhookUrl: string | null;
   description: string | null;
+  liveStatus?: TelegramWebhookLiveStatus;
+  liveWebhookUrl?: string | null;
+  liveDescription?: string | null;
+  secretTokenConfigured?: boolean;
 }
 
 let webhookReadiness: TelegramWebhookReadiness = {
@@ -49,12 +56,17 @@ export function getTelegramWebhookReadiness(): TelegramWebhookReadiness {
   return { ...webhookReadiness };
 }
 
-function redactSensitiveValues(message: string, values: string[]): string {
-  return values.reduce(
-    (redacted, value) =>
-      value ? redacted.replaceAll(value, "[REDACTED]") : redacted,
-    message,
-  );
+function redactSensitiveValues(
+  message: string,
+  values: Array<string | undefined>,
+): string {
+  let redacted = message;
+  for (const value of values) {
+    if (value) {
+      redacted = redacted.replaceAll(value, "[REDACTED]");
+    }
+  }
+  return redacted;
 }
 
 function createRegistrationError(
@@ -81,6 +93,196 @@ function waitForRetry(): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, TELEGRAM_WEBHOOK_RETRY_DELAY_MS);
   });
+}
+
+const EXPECTED_ALLOWED_UPDATES = ["message", "callback_query"];
+
+interface TelegramWebhookInfo {
+  url?: unknown;
+  allowed_updates?: unknown;
+  last_error_message?: unknown;
+  last_error_date?: unknown;
+}
+
+interface TelegramWebhookInfoResponse {
+  ok: boolean;
+  description?: unknown;
+  result?: TelegramWebhookInfo;
+}
+
+let liveWebhookCheck: Promise<void> | null = null;
+
+function getSafeTelegramDescription(
+  description: unknown,
+  sensitiveValues: Array<string | undefined>,
+  fallback: string,
+): string {
+  const rawDescription =
+    typeof description === "string" && description.trim()
+      ? description.trim()
+      : fallback;
+  return redactSensitiveValues(rawDescription, sensitiveValues);
+}
+
+function updateLiveWebhookReadiness(
+  liveStatus: TelegramWebhookLiveStatus,
+  liveWebhookUrl: string | null,
+  liveDescription: string | null,
+  secretTokenConfigured: boolean,
+): void {
+  webhookReadiness = {
+    ...webhookReadiness,
+    liveStatus,
+    liveWebhookUrl,
+    liveDescription,
+    secretTokenConfigured,
+  };
+}
+
+function hasExpectedAllowedUpdates(value: unknown): boolean {
+  if (!Array.isArray(value)) {
+    // Telegram may omit this field when it has the default update set. The
+    // URL is still useful for detecting externally replaced webhooks.
+    return true;
+  }
+
+  return (
+    value.length === EXPECTED_ALLOWED_UPDATES.length &&
+    EXPECTED_ALLOWED_UPDATES.every((update) => value.includes(update))
+  );
+}
+
+async function performTelegramWebhookCheck(): Promise<void> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const secretToken = process.env.TELEGRAM_WEBHOOK_SECRET;
+  const webhookUrl = getConfiguredWebhookUrl();
+  const sensitiveValues = [token, secretToken];
+
+  if (!token) {
+    updateLiveWebhookReadiness(
+      "unavailable",
+      null,
+      "TELEGRAM_BOT_TOKEN not set — cannot inspect the live Telegram webhook",
+      false,
+    );
+    return;
+  }
+
+  if (!secretToken) {
+    updateLiveWebhookReadiness(
+      "unavailable",
+      null,
+      "TELEGRAM_WEBHOOK_SECRET not set — cannot verify webhook expectations",
+      false,
+    );
+    return;
+  }
+
+  if (!webhookUrl) {
+    updateLiveWebhookReadiness(
+      "unavailable",
+      null,
+      "Cannot determine the configured public webhook URL",
+      true,
+    );
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.telegram.org/bot${token}/getWebhookInfo`,
+      { method: "GET" },
+    );
+    const data = (await response.json()) as TelegramWebhookInfoResponse;
+
+    if (!response.ok || !data.ok) {
+      updateLiveWebhookReadiness(
+        "unavailable",
+        null,
+        getSafeTelegramDescription(
+          data.description,
+          sensitiveValues,
+          "Telegram did not provide a webhook inspection error",
+        ),
+        true,
+      );
+      return;
+    }
+
+    const info = data.result ?? {};
+    const liveWebhookUrl =
+      typeof info.url === "string"
+        ? redactSensitiveValues(info.url, sensitiveValues)
+        : null;
+
+    if (!liveWebhookUrl) {
+      updateLiveWebhookReadiness(
+        "stale",
+        null,
+        "Telegram has no active webhook configured",
+        true,
+      );
+      return;
+    }
+
+    if (
+      liveWebhookUrl !== webhookUrl ||
+      !hasExpectedAllowedUpdates(info.allowed_updates)
+    ) {
+      updateLiveWebhookReadiness(
+        "out_of_band",
+        liveWebhookUrl,
+        "Telegram webhook configuration differs from the app configuration",
+        true,
+      );
+      return;
+    }
+
+    if (typeof info.last_error_date === "number") {
+      updateLiveWebhookReadiness(
+        "stale",
+        liveWebhookUrl,
+        getSafeTelegramDescription(
+          info.last_error_message,
+          sensitiveValues,
+          "Telegram reported a recent webhook delivery error",
+        ),
+        true,
+      );
+      return;
+    }
+
+    updateLiveWebhookReadiness("matching", liveWebhookUrl, null, true);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    updateLiveWebhookReadiness(
+      "unavailable",
+      null,
+      redactSensitiveValues(
+        `Telegram webhook inspection failed: ${reason}`,
+        sensitiveValues,
+      ),
+      true,
+    );
+  }
+}
+
+/**
+ * Compare Telegram's live webhook configuration with this app's expectations.
+ *
+ * Telegram does not return the configured secret token from getWebhookInfo,
+ * so this verifies the URL and allowed updates while reporting whether the
+ * app has a secret configured. The secret remains write-only from Telegram's
+ * API and is never included in health output or diagnostics.
+ */
+export function checkTelegramWebhook(): Promise<void> {
+  if (!liveWebhookCheck) {
+    liveWebhookCheck = performTelegramWebhookCheck().finally(() => {
+      liveWebhookCheck = null;
+    });
+  }
+
+  return liveWebhookCheck;
 }
 
 export async function registerTelegramWebhook(): Promise<void> {
@@ -117,7 +319,11 @@ export async function registerTelegramWebhook(): Promise<void> {
 
   let lastFailure: { description: string; retryable: boolean } | null = null;
 
-  for (let attempt = 1; attempt <= TELEGRAM_WEBHOOK_MAX_ATTEMPTS; attempt += 1) {
+  for (
+    let attempt = 1;
+    attempt <= TELEGRAM_WEBHOOK_MAX_ATTEMPTS;
+    attempt += 1
+  ) {
     try {
       const res = await fetch(
         `https://api.telegram.org/bot${token}/setWebhook`,

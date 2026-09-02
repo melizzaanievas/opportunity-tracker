@@ -174,7 +174,15 @@ paths:
           name: type
           schema:
             type: string
-            enum: [job, grant, casting, singing-competition, grant-fellowship, other]
+            enum:
+              [
+                job,
+                grant,
+                casting,
+                singing-competition,
+                grant-fellowship,
+                other,
+              ]
           required: false
           description: Filter by type
       responses:
@@ -536,6 +544,15 @@ components:
               type: ["string", "null"]
             description:
               type: ["string", "null"]
+            liveStatus:
+              type: string
+              enum: [unknown, matching, out_of_band, stale, unavailable]
+            liveWebhookUrl:
+              type: ["string", "null"]
+            liveDescription:
+              type: ["string", "null"]
+            secretTokenConfigured:
+              type: boolean
 
     ErrorResponse:
       type: object
@@ -584,7 +601,8 @@ components:
               type: number
         byType:
           type: object
-          required: [job, grant, casting, singing-competition, grant-fellowship, other]
+          required:
+            [job, grant, casting, singing-competition, grant-fellowship, other]
           properties:
             job:
               type: number
@@ -614,7 +632,8 @@ components:
           type: ["string", "null"]
         type:
           type: string
-          enum: [job, grant, casting, singing-competition, grant-fellowship, other]
+          enum:
+            [job, grant, casting, singing-competition, grant-fellowship, other]
         status:
           type: string
           enum: [to-apply, applied, interviewing, offered, archived]
@@ -645,7 +664,8 @@ components:
           type: string
         type:
           type: string
-          enum: [job, grant, casting, singing-competition, grant-fellowship, other]
+          enum:
+            [job, grant, casting, singing-competition, grant-fellowship, other]
         status:
           type: string
           enum: [to-apply, applied, interviewing, offered, archived]
@@ -674,7 +694,8 @@ components:
           type: string
         type:
           type: string
-          enum: [job, grant, casting, singing-competition, grant-fellowship, other]
+          enum:
+            [job, grant, casting, singing-competition, grant-fellowship, other]
         status:
           type: string
           enum: [to-apply, applied, interviewing, offered, archived]
@@ -714,7 +735,8 @@ components:
             type: string
         type:
           type: string
-          enum: [job, grant, casting, singing-competition, grant-fellowship, other]
+          enum:
+            [job, grant, casting, singing-competition, grant-fellowship, other]
         scrapeSuccess:
           type: boolean
 

@@ -3,12 +3,18 @@ import { createServer, type Server } from "node:http";
 import { afterEach, describe, it } from "node:test";
 import express from "express";
 import healthRouter from "../src/routes/health.ts";
-import { registerTelegramWebhook } from "../src/lib/register-webhook.ts";
-import { getTelegramWebhookReadiness } from "../src/lib/register-webhook.ts";
+import {
+  checkTelegramWebhook,
+  getTelegramWebhookReadiness,
+  registerTelegramWebhook,
+} from "../src/lib/register-webhook.ts";
 
 const TELEGRAM_BOT_TOKEN = "register-webhook-test-token";
 const TELEGRAM_WEBHOOK_SECRET = "register-webhook-test-secret";
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook`;
+const TELEGRAM_WEBHOOK_INFO_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo`;
+const EXPECTED_WEBHOOK_URL =
+  "https://example.replit.app/api/integrations/telegram-webhook";
 
 const environmentKeys = [
   "REPLIT_DOMAINS",
@@ -32,8 +38,7 @@ afterEach(() => {
   }
 });
 
-
-async function fetchHealth(): Promise<Record<string, unknown>> {
+async function fetchHealth(query = ""): Promise<Record<string, unknown>> {
   const server: Server = createServer(express().use(healthRouter));
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
@@ -47,7 +52,9 @@ async function fetchHealth(): Promise<Record<string, unknown>> {
   }
 
   try {
-    const response = await fetch(`http://127.0.0.1:${address.port}/healthz`);
+    const response = await fetch(
+      `http://127.0.0.1:${address.port}/healthz${query}`,
+    );
     assert.equal(response.status, 200);
     return (await response.json()) as Record<string, unknown>;
   } finally {
@@ -337,9 +344,214 @@ describe("Telegram webhook registration", () => {
     assert.equal(fetchCalls, 3);
     assert.deepEqual(getTelegramWebhookReadiness(), {
       status: "failed",
-      webhookUrl:
-        "https://example.replit.app/api/integrations/telegram-webhook",
+      webhookUrl: EXPECTED_WEBHOOK_URL,
       description: "temporary failure for [REDACTED] with [REDACTED]",
     });
+  });
+
+  it("reports when Telegram's live webhook matches the app configuration", async () => {
+    process.env.REPLIT_DOMAINS = "example.replit.app";
+    delete process.env.REPLIT_DEV_DOMAIN;
+    process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
+    process.env.TELEGRAM_WEBHOOK_SECRET = TELEGRAM_WEBHOOK_SECRET;
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      if (url === TELEGRAM_API_URL) {
+        return new Response(JSON.stringify({ ok: true, result: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      assert.equal(url, TELEGRAM_WEBHOOK_INFO_URL);
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: {
+            url: EXPECTED_WEBHOOK_URL,
+            allowed_updates: ["callback_query", "message"],
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }) as typeof fetch;
+
+    try {
+      await registerTelegramWebhook();
+      await checkTelegramWebhook();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    assert.deepEqual(getTelegramWebhookReadiness(), {
+      status: "successful",
+      webhookUrl: EXPECTED_WEBHOOK_URL,
+      description: null,
+      liveStatus: "matching",
+      liveWebhookUrl: EXPECTED_WEBHOOK_URL,
+      liveDescription: null,
+      secretTokenConfigured: true,
+    });
+  });
+
+  it("reports an out-of-band live webhook without exposing credentials", async () => {
+    process.env.REPLIT_DOMAINS = "example.replit.app";
+    delete process.env.REPLIT_DEV_DOMAIN;
+    process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
+    process.env.TELEGRAM_WEBHOOK_SECRET = TELEGRAM_WEBHOOK_SECRET;
+
+    const externalUrl = `https://external.example/${TELEGRAM_BOT_TOKEN}`;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      if (url === TELEGRAM_API_URL) {
+        return new Response(JSON.stringify({ ok: true, result: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      assert.equal(url, TELEGRAM_WEBHOOK_INFO_URL);
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: { url: externalUrl, allowed_updates: ["message"] },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }) as typeof fetch;
+
+    try {
+      await registerTelegramWebhook();
+      await checkTelegramWebhook();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    const health = await fetchHealth();
+    assert.deepEqual(health.telegramWebhook, {
+      status: "successful",
+      webhookUrl: EXPECTED_WEBHOOK_URL,
+      description: null,
+      liveStatus: "out_of_band",
+      liveWebhookUrl: "https://external.example/[REDACTED]",
+      liveDescription:
+        "Telegram webhook configuration differs from the app configuration",
+      secretTokenConfigured: true,
+    });
+    assert.doesNotMatch(JSON.stringify(health), new RegExp(TELEGRAM_BOT_TOKEN));
+    assert.doesNotMatch(
+      JSON.stringify(health),
+      new RegExp(TELEGRAM_WEBHOOK_SECRET),
+    );
+  });
+
+  it("reports a stale live webhook when Telegram has no active URL", async () => {
+    process.env.REPLIT_DOMAINS = "example.replit.app";
+    delete process.env.REPLIT_DEV_DOMAIN;
+    process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
+    process.env.TELEGRAM_WEBHOOK_SECRET = TELEGRAM_WEBHOOK_SECRET;
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ ok: true, result: { url: "" } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })) as typeof fetch;
+
+    try {
+      await checkTelegramWebhook();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    assert.equal(getTelegramWebhookReadiness().liveStatus, "stale");
+    assert.equal(
+      getTelegramWebhookReadiness().liveDescription,
+      "Telegram has no active webhook configured",
+    );
+  });
+
+  it("refreshes the live webhook status when health is requested on demand", async () => {
+    process.env.REPLIT_DOMAINS = "example.replit.app";
+    delete process.env.REPLIT_DEV_DOMAIN;
+    process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
+    process.env.TELEGRAM_WEBHOOK_SECRET = TELEGRAM_WEBHOOK_SECRET;
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      if (url.startsWith("http://127.0.0.1:")) {
+        return originalFetch(input);
+      }
+      assert.equal(url, TELEGRAM_WEBHOOK_INFO_URL);
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: { url: EXPECTED_WEBHOOK_URL },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }) as typeof fetch;
+
+    try {
+      const health = await fetchHealth("?refresh=1");
+      assert.equal(
+        (health.telegramWebhook as Record<string, unknown>).liveStatus,
+        "matching",
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("reports a safe unavailable state when live inspection fails", async () => {
+    process.env.REPLIT_DOMAINS = "example.replit.app";
+    delete process.env.REPLIT_DEV_DOMAIN;
+    process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
+    process.env.TELEGRAM_WEBHOOK_SECRET = TELEGRAM_WEBHOOK_SECRET;
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => {
+      throw new Error(
+        `Telegram request failed for ${TELEGRAM_BOT_TOKEN} and ${TELEGRAM_WEBHOOK_SECRET}`,
+      );
+    }) as typeof fetch;
+
+    try {
+      await checkTelegramWebhook();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    const readiness = getTelegramWebhookReadiness();
+    assert.equal(readiness.liveStatus, "unavailable");
+    assert.equal(
+      readiness.liveDescription,
+      "Telegram webhook inspection failed: Telegram request failed for [REDACTED] and [REDACTED]",
+    );
+    assert.doesNotMatch(
+      JSON.stringify(readiness),
+      new RegExp(TELEGRAM_BOT_TOKEN),
+    );
+    assert.doesNotMatch(
+      JSON.stringify(readiness),
+      new RegExp(TELEGRAM_WEBHOOK_SECRET),
+    );
   });
 });

@@ -5,7 +5,8 @@
  * Opportunity Tracker API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { HealthStatusTelegramWebhookStatus } from './healthStatusTelegramWebhookStatus';
+import type { HealthStatusTelegramWebhookLiveStatus } from "./healthStatusTelegramWebhookLiveStatus";
+import type { HealthStatusTelegramWebhookStatus } from "./healthStatusTelegramWebhookStatus";
 
 export type HealthStatusTelegramWebhook = {
   status: HealthStatusTelegramWebhookStatus;
@@ -13,4 +14,10 @@ export type HealthStatusTelegramWebhook = {
   webhookUrl: string | null;
   /** @nullable */
   description: string | null;
+  liveStatus?: HealthStatusTelegramWebhookLiveStatus;
+  /** @nullable */
+  liveWebhookUrl?: string | null;
+  /** @nullable */
+  liveDescription?: string | null;
+  secretTokenConfigured?: boolean;
 };

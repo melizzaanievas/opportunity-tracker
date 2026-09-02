@@ -4,3 +4,4 @@
 - [TypeScript source tests](typescript-source-tests.md) — Use the workspace tsx runner for API source tests because native Node ESM misses extensionless imports.
 - [OpenAPI webhook payloads](openapi-webhook-payloads.md) — Use named component refs for webhook request bodies to avoid generated Zod export collisions.
 - [Provider fetch mocks](provider-fetch-mocks.md) — Global provider API stubs must forward local test-server requests to keep HTTP integration tests real.
+- [Telegram webhook inspection](telegram-webhook-live-check.md) — Telegram’s live webhook info omits the secret token, so checks can verify URL and update filters but not the secret itself.

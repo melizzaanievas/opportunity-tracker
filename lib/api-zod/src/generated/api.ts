@@ -5,84 +5,83 @@
  * Opportunity Tracker API specification
  * OpenAPI spec version: 0.1.0
  */
-import * as zod from 'zod';
-
+import * as zod from "zod";
 
 /**
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
-  "status": zod.string(),
-  "telegramWebhook": zod.object({
-  "status": zod.enum(['pending', 'successful', 'failed']),
-  "webhookUrl": zod.string().nullable(),
-  "description": zod.string().nullable()
-})
-})
-
+  status: zod.string(),
+  telegramWebhook: zod.object({
+    status: zod.enum(["pending", "successful", "failed"]),
+    webhookUrl: zod.string().nullable(),
+    description: zod.string().nullable(),
+    liveStatus: zod
+      .enum(["unknown", "matching", "out_of_band", "stale", "unavailable"])
+      .optional(),
+    liveWebhookUrl: zod.string().nullish(),
+    liveDescription: zod.string().nullish(),
+    secretTokenConfigured: zod.boolean().optional(),
+  }),
+});
 
 /**
  * @summary Log in with the app password
  */
 export const LoginBody = zod.object({
-  "password": zod.string()
-})
+  password: zod.string(),
+});
 
 export const LoginResponse = zod.object({
-  "authenticated": zod.boolean()
-})
-
+  authenticated: zod.boolean(),
+});
 
 /**
  * @summary Log out
  */
 export const LogoutResponse = zod.object({
-  "authenticated": zod.boolean()
-})
-
+  authenticated: zod.boolean(),
+});
 
 /**
  * @summary Get current authentication status
  */
 export const GetAuthMeResponse = zod.object({
-  "authenticated": zod.boolean()
-})
-
+  authenticated: zod.boolean(),
+});
 
 /**
  * @summary Get dashboard statistics
  */
 export const GetDashboardStatsResponse = zod.object({
-  "total": zod.number(),
-  "closingSoon": zod.number(),
-  "byStatus": zod.object({
-  "to-apply": zod.number(),
-  "applied": zod.number(),
-  "interviewing": zod.number(),
-  "offered": zod.number(),
-  "archived": zod.number()
-}),
-  "byType": zod.object({
-  "job": zod.number(),
-  "grant": zod.number(),
-  "casting": zod.number(),
-  "singing-competition": zod.number(),
-  "grant-fellowship": zod.number(),
-  "other": zod.number()
-})
-})
-
+  total: zod.number(),
+  closingSoon: zod.number(),
+  byStatus: zod.object({
+    "to-apply": zod.number(),
+    applied: zod.number(),
+    interviewing: zod.number(),
+    offered: zod.number(),
+    archived: zod.number(),
+  }),
+  byType: zod.object({
+    job: zod.number(),
+    grant: zod.number(),
+    casting: zod.number(),
+    "singing-competition": zod.number(),
+    "grant-fellowship": zod.number(),
+    other: zod.number(),
+  }),
+});
 
 /**
  * @summary Get automated job scout preferences
  */
 export const GetPreferencesResponse = zod.object({
-  "targetTitles": zod.array(zod.string()),
-  "preferredLocations": zod.array(zod.string()),
-  "preferredJobTypes": zod.array(zod.string()),
-  "updatedAt": zod.string()
-})
-
+  targetTitles: zod.array(zod.string()),
+  preferredLocations: zod.array(zod.string()),
+  preferredJobTypes: zod.array(zod.string()),
+  updatedAt: zod.string(),
+});
 
 /**
  * @summary Replace automated job scout preferences
@@ -99,315 +98,393 @@ export const updatePreferencesBodyPreferredJobTypesItemMax = 50;
 
 export const updatePreferencesBodyPreferredJobTypesMax = 10;
 
-
-
 export const UpdatePreferencesBody = zod.object({
-  "targetTitles": zod.array(zod.string().min(1).max(updatePreferencesBodyTargetTitlesItemMax)).max(updatePreferencesBodyTargetTitlesMax),
-  "preferredLocations": zod.array(zod.string().min(1).max(updatePreferencesBodyPreferredLocationsItemMax)).max(updatePreferencesBodyPreferredLocationsMax),
-  "preferredJobTypes": zod.array(zod.string().min(1).max(updatePreferencesBodyPreferredJobTypesItemMax)).max(updatePreferencesBodyPreferredJobTypesMax)
-})
+  targetTitles: zod
+    .array(zod.string().min(1).max(updatePreferencesBodyTargetTitlesItemMax))
+    .max(updatePreferencesBodyTargetTitlesMax),
+  preferredLocations: zod
+    .array(
+      zod.string().min(1).max(updatePreferencesBodyPreferredLocationsItemMax),
+    )
+    .max(updatePreferencesBodyPreferredLocationsMax),
+  preferredJobTypes: zod
+    .array(
+      zod.string().min(1).max(updatePreferencesBodyPreferredJobTypesItemMax),
+    )
+    .max(updatePreferencesBodyPreferredJobTypesMax),
+});
 
 export const UpdatePreferencesResponse = zod.object({
-  "targetTitles": zod.array(zod.string()),
-  "preferredLocations": zod.array(zod.string()),
-  "preferredJobTypes": zod.array(zod.string()),
-  "updatedAt": zod.string()
-})
-
+  targetTitles: zod.array(zod.string()),
+  preferredLocations: zod.array(zod.string()),
+  preferredJobTypes: zod.array(zod.string()),
+  updatedAt: zod.string(),
+});
 
 /**
  * @summary Run the automated job scout
  */
 export const RunJobScoutResponse = zod.object({
-  "success": zod.boolean(),
-  "message": zod.string(),
-  "discovered": zod.number(),
-  "sent": zod.number(),
-  "skipped": zod.number()
-})
-
+  success: zod.boolean(),
+  message: zod.string(),
+  discovered: zod.number(),
+  sent: zod.number(),
+  skipped: zod.number(),
+});
 
 /**
  * @summary List all opportunities sorted by deadline
  */
 export const ListOpportunitiesQueryParams = zod.object({
-  "status": zod.enum(['to-apply', 'applied', 'interviewing', 'offered', 'archived']).optional().describe('Filter by status'),
-  "type": zod.enum(['job', 'grant', 'casting', 'singing-competition', 'grant-fellowship', 'other']).optional().describe('Filter by type')
-})
+  status: zod
+    .enum(["to-apply", "applied", "interviewing", "offered", "archived"])
+    .optional()
+    .describe("Filter by status"),
+  type: zod
+    .enum([
+      "job",
+      "grant",
+      "casting",
+      "singing-competition",
+      "grant-fellowship",
+      "other",
+    ])
+    .optional()
+    .describe("Filter by type"),
+});
 
 export const ListOpportunitiesResponseItem = zod.object({
-  "id": zod.number(),
-  "url": zod.string(),
-  "title": zod.string(),
-  "company": zod.string().nullish(),
-  "type": zod.enum(['job', 'grant', 'casting', 'singing-competition', 'grant-fellowship', 'other']),
-  "status": zod.enum(['to-apply', 'applied', 'interviewing', 'offered', 'archived']),
-  "deadline": zod.string().nullish().describe('ISO date string YYYY-MM-DD'),
-  "summary": zod.string().nullish(),
-  "keyActionSteps": zod.string().nullish(),
-  "createdAt": zod.string(),
-  "taskCount": zod.number().optional(),
-  "completedTaskCount": zod.number().optional()
-})
-export const ListOpportunitiesResponse = zod.array(ListOpportunitiesResponseItem)
-
+  id: zod.number(),
+  url: zod.string(),
+  title: zod.string(),
+  company: zod.string().nullish(),
+  type: zod.enum([
+    "job",
+    "grant",
+    "casting",
+    "singing-competition",
+    "grant-fellowship",
+    "other",
+  ]),
+  status: zod.enum([
+    "to-apply",
+    "applied",
+    "interviewing",
+    "offered",
+    "archived",
+  ]),
+  deadline: zod.string().nullish().describe("ISO date string YYYY-MM-DD"),
+  summary: zod.string().nullish(),
+  keyActionSteps: zod.string().nullish(),
+  createdAt: zod.string(),
+  taskCount: zod.number().optional(),
+  completedTaskCount: zod.number().optional(),
+});
+export const ListOpportunitiesResponse = zod.array(
+  ListOpportunitiesResponseItem,
+);
 
 /**
  * @summary Create a new opportunity
  */
 
-
 export const createOpportunityBodyActionPlanTasksMax = 20;
 
-
-
 export const CreateOpportunityBody = zod.object({
-  "url": zod.string(),
-  "title": zod.string().min(1),
-  "company": zod.string().optional(),
-  "type": zod.enum(['job', 'grant', 'casting', 'singing-competition', 'grant-fellowship', 'other']),
-  "status": zod.enum(['to-apply', 'applied', 'interviewing', 'offered', 'archived']),
-  "deadline": zod.string().optional(),
-  "summary": zod.string().optional(),
-  "keyActionSteps": zod.string().optional(),
-  "actionPlanTasks": zod.array(zod.string().min(1)).max(createOpportunityBodyActionPlanTasksMax).optional()
-})
+  url: zod.string(),
+  title: zod.string().min(1),
+  company: zod.string().optional(),
+  type: zod.enum([
+    "job",
+    "grant",
+    "casting",
+    "singing-competition",
+    "grant-fellowship",
+    "other",
+  ]),
+  status: zod.enum([
+    "to-apply",
+    "applied",
+    "interviewing",
+    "offered",
+    "archived",
+  ]),
+  deadline: zod.string().optional(),
+  summary: zod.string().optional(),
+  keyActionSteps: zod.string().optional(),
+  actionPlanTasks: zod
+    .array(zod.string().min(1))
+    .max(createOpportunityBodyActionPlanTasksMax)
+    .optional(),
+});
 
 export const CreateOpportunityResponse = zod.object({
-  "id": zod.number(),
-  "url": zod.string(),
-  "title": zod.string(),
-  "company": zod.string().nullish(),
-  "type": zod.enum(['job', 'grant', 'casting', 'singing-competition', 'grant-fellowship', 'other']),
-  "status": zod.enum(['to-apply', 'applied', 'interviewing', 'offered', 'archived']),
-  "deadline": zod.string().nullish().describe('ISO date string YYYY-MM-DD'),
-  "summary": zod.string().nullish(),
-  "keyActionSteps": zod.string().nullish(),
-  "createdAt": zod.string(),
-  "taskCount": zod.number().optional(),
-  "completedTaskCount": zod.number().optional()
-})
-
+  id: zod.number(),
+  url: zod.string(),
+  title: zod.string(),
+  company: zod.string().nullish(),
+  type: zod.enum([
+    "job",
+    "grant",
+    "casting",
+    "singing-competition",
+    "grant-fellowship",
+    "other",
+  ]),
+  status: zod.enum([
+    "to-apply",
+    "applied",
+    "interviewing",
+    "offered",
+    "archived",
+  ]),
+  deadline: zod.string().nullish().describe("ISO date string YYYY-MM-DD"),
+  summary: zod.string().nullish(),
+  keyActionSteps: zod.string().nullish(),
+  createdAt: zod.string(),
+  taskCount: zod.number().optional(),
+  completedTaskCount: zod.number().optional(),
+});
 
 /**
  * @summary Scrape a URL to auto-extract opportunity details
  */
-export const scrapeOpportunityUrlBodyUrlRegExp = new RegExp('^https?:/');
-
+export const scrapeOpportunityUrlBodyUrlRegExp = new RegExp("^https?:/");
 
 export const ScrapeOpportunityUrlBody = zod.object({
-  "url": zod.string().regex(scrapeOpportunityUrlBodyUrlRegExp)
-})
+  url: zod.string().regex(scrapeOpportunityUrlBodyUrlRegExp),
+});
 
 export const ScrapeOpportunityUrlResponse = zod.object({
-  "url": zod.string(),
-  "title": zod.string().nullish(),
-  "deadline": zod.string().nullish(),
-  "summary": zod.string().nullish(),
-  "keyActionSteps": zod.string().nullish(),
-  "actionPlanTasks": zod.array(zod.string()).optional(),
-  "type": zod.enum(['job', 'grant', 'casting', 'singing-competition', 'grant-fellowship', 'other']),
-  "scrapeSuccess": zod.boolean().optional()
-})
-
+  url: zod.string(),
+  title: zod.string().nullish(),
+  deadline: zod.string().nullish(),
+  summary: zod.string().nullish(),
+  keyActionSteps: zod.string().nullish(),
+  actionPlanTasks: zod.array(zod.string()).optional(),
+  type: zod.enum([
+    "job",
+    "grant",
+    "casting",
+    "singing-competition",
+    "grant-fellowship",
+    "other",
+  ]),
+  scrapeSuccess: zod.boolean().optional(),
+});
 
 /**
  * @summary Get a single opportunity
  */
 export const GetOpportunityParams = zod.object({
-  "id": zod.coerce.number()
-})
+  id: zod.coerce.number(),
+});
 
 export const GetOpportunityResponse = zod.object({
-  "id": zod.number(),
-  "url": zod.string(),
-  "title": zod.string(),
-  "company": zod.string().nullish(),
-  "type": zod.enum(['job', 'grant', 'casting', 'singing-competition', 'grant-fellowship', 'other']),
-  "status": zod.enum(['to-apply', 'applied', 'interviewing', 'offered', 'archived']),
-  "deadline": zod.string().nullish().describe('ISO date string YYYY-MM-DD'),
-  "summary": zod.string().nullish(),
-  "keyActionSteps": zod.string().nullish(),
-  "createdAt": zod.string(),
-  "taskCount": zod.number().optional(),
-  "completedTaskCount": zod.number().optional()
-})
-
+  id: zod.number(),
+  url: zod.string(),
+  title: zod.string(),
+  company: zod.string().nullish(),
+  type: zod.enum([
+    "job",
+    "grant",
+    "casting",
+    "singing-competition",
+    "grant-fellowship",
+    "other",
+  ]),
+  status: zod.enum([
+    "to-apply",
+    "applied",
+    "interviewing",
+    "offered",
+    "archived",
+  ]),
+  deadline: zod.string().nullish().describe("ISO date string YYYY-MM-DD"),
+  summary: zod.string().nullish(),
+  keyActionSteps: zod.string().nullish(),
+  createdAt: zod.string(),
+  taskCount: zod.number().optional(),
+  completedTaskCount: zod.number().optional(),
+});
 
 /**
  * @summary Update an opportunity
  */
 export const UpdateOpportunityParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-
-
+  id: zod.coerce.number(),
+});
 
 export const UpdateOpportunityBody = zod.object({
-  "url": zod.string().optional(),
-  "title": zod.string().min(1).optional(),
-  "company": zod.string().optional(),
-  "type": zod.enum(['job', 'grant', 'casting', 'singing-competition', 'grant-fellowship', 'other']).optional(),
-  "status": zod.enum(['to-apply', 'applied', 'interviewing', 'offered', 'archived']).optional(),
-  "deadline": zod.string().optional(),
-  "summary": zod.string().optional(),
-  "keyActionSteps": zod.string().optional()
-})
+  url: zod.string().optional(),
+  title: zod.string().min(1).optional(),
+  company: zod.string().optional(),
+  type: zod
+    .enum([
+      "job",
+      "grant",
+      "casting",
+      "singing-competition",
+      "grant-fellowship",
+      "other",
+    ])
+    .optional(),
+  status: zod
+    .enum(["to-apply", "applied", "interviewing", "offered", "archived"])
+    .optional(),
+  deadline: zod.string().optional(),
+  summary: zod.string().optional(),
+  keyActionSteps: zod.string().optional(),
+});
 
 export const UpdateOpportunityResponse = zod.object({
-  "id": zod.number(),
-  "url": zod.string(),
-  "title": zod.string(),
-  "company": zod.string().nullish(),
-  "type": zod.enum(['job', 'grant', 'casting', 'singing-competition', 'grant-fellowship', 'other']),
-  "status": zod.enum(['to-apply', 'applied', 'interviewing', 'offered', 'archived']),
-  "deadline": zod.string().nullish().describe('ISO date string YYYY-MM-DD'),
-  "summary": zod.string().nullish(),
-  "keyActionSteps": zod.string().nullish(),
-  "createdAt": zod.string(),
-  "taskCount": zod.number().optional(),
-  "completedTaskCount": zod.number().optional()
-})
-
+  id: zod.number(),
+  url: zod.string(),
+  title: zod.string(),
+  company: zod.string().nullish(),
+  type: zod.enum([
+    "job",
+    "grant",
+    "casting",
+    "singing-competition",
+    "grant-fellowship",
+    "other",
+  ]),
+  status: zod.enum([
+    "to-apply",
+    "applied",
+    "interviewing",
+    "offered",
+    "archived",
+  ]),
+  deadline: zod.string().nullish().describe("ISO date string YYYY-MM-DD"),
+  summary: zod.string().nullish(),
+  keyActionSteps: zod.string().nullish(),
+  createdAt: zod.string(),
+  taskCount: zod.number().optional(),
+  completedTaskCount: zod.number().optional(),
+});
 
 /**
  * @summary Delete an opportunity
  */
 export const DeleteOpportunityParams = zod.object({
-  "id": zod.coerce.number()
-})
+  id: zod.coerce.number(),
+});
 
-export const DeleteOpportunityResponse = zod.void()
-
+export const DeleteOpportunityResponse = zod.void();
 
 /**
  * @summary List sub-tasks for an opportunity
  */
 export const ListTasksParams = zod.object({
-  "id": zod.coerce.number()
-})
+  id: zod.coerce.number(),
+});
 
 export const ListTasksResponseItem = zod.object({
-  "id": zod.number(),
-  "opportunityId": zod.number(),
-  "title": zod.string(),
-  "completed": zod.boolean(),
-  "createdAt": zod.string()
-})
-export const ListTasksResponse = zod.array(ListTasksResponseItem)
-
+  id: zod.number(),
+  opportunityId: zod.number(),
+  title: zod.string(),
+  completed: zod.boolean(),
+  createdAt: zod.string(),
+});
+export const ListTasksResponse = zod.array(ListTasksResponseItem);
 
 /**
  * @summary Add a sub-task to an opportunity
  */
 export const CreateTaskParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-
-
+  id: zod.coerce.number(),
+});
 
 export const CreateTaskBody = zod.object({
-  "title": zod.string().min(1)
-})
+  title: zod.string().min(1),
+});
 
 export const CreateTaskResponse = zod.object({
-  "id": zod.number(),
-  "opportunityId": zod.number(),
-  "title": zod.string(),
-  "completed": zod.boolean(),
-  "createdAt": zod.string()
-})
-
+  id: zod.number(),
+  opportunityId: zod.number(),
+  title: zod.string(),
+  completed: zod.boolean(),
+  createdAt: zod.string(),
+});
 
 /**
  * @summary Update a sub-task
  */
 export const UpdateTaskParams = zod.object({
-  "id": zod.coerce.number(),
-  "taskId": zod.coerce.number()
-})
-
-
-
+  id: zod.coerce.number(),
+  taskId: zod.coerce.number(),
+});
 
 export const UpdateTaskBody = zod.object({
-  "title": zod.string().min(1).optional(),
-  "completed": zod.boolean().optional()
-})
+  title: zod.string().min(1).optional(),
+  completed: zod.boolean().optional(),
+});
 
 export const UpdateTaskResponse = zod.object({
-  "id": zod.number(),
-  "opportunityId": zod.number(),
-  "title": zod.string(),
-  "completed": zod.boolean(),
-  "createdAt": zod.string()
-})
-
+  id: zod.number(),
+  opportunityId: zod.number(),
+  title: zod.string(),
+  completed: zod.boolean(),
+  createdAt: zod.string(),
+});
 
 /**
  * @summary Delete a sub-task
  */
 export const DeleteTaskParams = zod.object({
-  "id": zod.coerce.number(),
-  "taskId": zod.coerce.number()
-})
+  id: zod.coerce.number(),
+  taskId: zod.coerce.number(),
+});
 
-export const DeleteTaskResponse = zod.void()
-
+export const DeleteTaskResponse = zod.void();
 
 /**
  * @summary Initiate Google Calendar OAuth and add deadline event
  */
 export const AddToCalendarParams = zod.object({
-  "id": zod.coerce.number()
-})
+  id: zod.coerce.number(),
+});
 
 export const AddToCalendarResponse = zod.object({
-  "success": zod.boolean(),
-  "authUrl": zod.string().nullish(),
-  "message": zod.string().nullish()
-})
-
+  success: zod.boolean(),
+  authUrl: zod.string().nullish(),
+  message: zod.string().nullish(),
+});
 
 /**
  * @summary Google OAuth 2.0 callback handler
  */
 export const GoogleOAuthCallbackQueryParams = zod.object({
-  "code": zod.coerce.string().optional(),
-  "state": zod.coerce.string().optional(),
-  "error": zod.coerce.string().optional()
-})
+  code: zod.coerce.string().optional(),
+  state: zod.coerce.string().optional(),
+  error: zod.coerce.string().optional(),
+});
 
-export const GoogleOAuthCallbackResponse = zod.void()
-
+export const GoogleOAuthCallbackResponse = zod.void();
 
 /**
  * @summary Send a test Telegram digest message
  */
 export const TestTelegramAlertResponse = zod.object({
-  "success": zod.boolean(),
-  "message": zod.string().nullish(),
-  "sent": zod.number().optional()
-})
-
+  success: zod.boolean(),
+  message: zod.string().nullish(),
+  sent: zod.number().optional(),
+});
 
 /**
  * @summary Receive Telegram messages and scout button callbacks
  */
-export const TelegramWebhookBody = zod.record(zod.string(), zod.unknown())
+export const TelegramWebhookBody = zod.record(zod.string(), zod.unknown());
 
-export const TelegramWebhookResponse = zod.unknown()
-
+export const TelegramWebhookResponse = zod.unknown();
 
 /**
  * @summary Secured endpoint to trigger the daily Telegram summary
  */
 export const CronDailySummaryResponse = zod.object({
-  "success": zod.boolean(),
-  "message": zod.string().nullish(),
-  "sent": zod.number().optional()
-})
-
-
+  success: zod.boolean(),
+  message: zod.string().nullish(),
+  sent: zod.number().optional(),
+});
