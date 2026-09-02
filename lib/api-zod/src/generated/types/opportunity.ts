@@ -12,6 +12,8 @@ export interface Opportunity {
   id: number;
   url: string;
   title: string;
+  /** @nullable */
+  company?: string | null;
   type: OpportunityType;
   status: OpportunityStatus;
   /**

@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import { logger } from "./logger";
 import { buildDailySummary, sendTelegramMessage } from "./telegram";
+import { runJobScout } from "./scout";
 
 export function startCronJobs(): void {
   // Run at 8:00 AM every day
@@ -19,5 +20,15 @@ export function startCronJobs(): void {
     }
   });
 
-  logger.info("Cron jobs registered (daily summary at 8:00 AM)");
+  cron.schedule("0 1 * * *", async () => {
+    logger.info("Running daily job scout cron");
+    try {
+      const result = await runJobScout();
+      logger.info(result, "Daily job scout completed");
+    } catch (err) {
+      logger.error({ err }, "Job scout cron failed");
+    }
+  }, { timezone: "UTC" });
+
+  logger.info("Cron jobs registered (job scout at 01:00 UTC, daily summary at 8:00 AM)");
 }

@@ -25,6 +25,8 @@ Add the following values to `.env` for local development or to Replit Secrets fo
 | `APP_PASSWORD` | Password protection for the web dashboard. |
 | `TELEGRAM_BOT_TOKEN` | Bot token from [@BotFather](https://t.me/BotFather). |
 | `TELEGRAM_CHAT_ID` | Your private Telegram Chat ID. |
+| `SESSION_SECRET` | Express session signing key. |
+| `SCOUT_CRON_SECRET` | Optional secret for external `POST /api/cron/scout` triggers. |
 
 Copy `.env.example` to `.env` as a starting point:
 
@@ -46,7 +48,7 @@ Create a new Replit app from your GitHub repository. Replit will detect the proj
 
 ### Configure secrets
 
-Open the Replit Secrets panel and add `APP_PASSWORD`, `TELEGRAM_BOT_TOKEN`, and `TELEGRAM_CHAT_ID`.
+Open the Replit Secrets panel and add `APP_PASSWORD`, `TELEGRAM_BOT_TOKEN`, and `TELEGRAM_CHAT_ID`. Add `SCOUT_CRON_SECRET` if an external scheduler will call the scout endpoint.
 
 For local development, add the same values to `.env`.
 
@@ -78,7 +80,27 @@ The API server includes a built-in daily summary schedule for 8:00 AM. The dashb
 - Start the API server. The bot webhook is registered during server startup.
 - Send an opportunity URL to the bot to capture it.
 
-Only messages from the configured `TELEGRAM_CHAT_ID` are accepted by the webhook.
+Only messages and callback actions from the configured `TELEGRAM_CHAT_ID` are accepted by the webhook.
+
+### Automated job scout
+
+Configure the scout through the authenticated `GET /api/preferences` and
+`PUT /api/preferences` endpoints:
+
+```json
+{
+  "targetTitles": ["Web3 Marketing", "Ecosystem Lead"],
+  "preferredLocations": ["Hong Kong", "Remote APAC"],
+  "preferredJobTypes": ["full-time"]
+}
+```
+
+The server runs the scout daily at **01:00 UTC (09:00 HKT)** using public
+Remote OK and Remotive feeds. New matches are sent to Telegram with Add to
+Tracker and Ignore buttons. A manual or external run can use
+`POST /api/cron/scout`; authenticated dashboard sessions may call it directly,
+while external schedulers must send `X-Scout-Cron-Secret` matching
+`SCOUT_CRON_SECRET`.
 
 ## Project Structure
 

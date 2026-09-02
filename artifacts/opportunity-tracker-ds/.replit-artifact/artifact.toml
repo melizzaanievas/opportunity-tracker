@@ -1,0 +1,19 @@
+kind = "design-system"
+previewPath = "/opportunity-tracker-ds/"
+title = "Opportunity Tracker Design System"
+description = "A reusable design system extracted from the private Opportunity Tracker app: an ethereal pastel gothic visual language for tracking jobs, grants, hackathons, and other opportunities with calm focus and clear next actions."
+version = "1.0.0"
+id = "artifacts/opportunity-tracker-ds"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/opportunity-tracker-ds/" ]
+localPort = 24603
+
+[services.development]
+run = "pnpm --filter @workspace/opportunity-tracker-ds run dev"
+
+[services.env]
+PORT = "24603"
+BASE_PATH = "/opportunity-tracker-ds/"

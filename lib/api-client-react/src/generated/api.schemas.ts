@@ -66,6 +66,8 @@ export interface Opportunity {
   id: number;
   url: string;
   title: string;
+  /** @nullable */
+  company?: string | null;
   type: OpportunityType;
   status: OpportunityStatus;
   /**
@@ -106,6 +108,7 @@ export interface OpportunityInput {
   url: string;
   /** @minLength 1 */
   title: string;
+  company?: string;
   type: OpportunityInputType;
   status: OpportunityInputStatus;
   deadline?: string;
@@ -137,6 +140,7 @@ export interface OpportunityPatch {
   url?: string;
   /** @minLength 1 */
   title?: string;
+  company?: string;
   type?: OpportunityPatchType;
   status?: OpportunityPatchStatus;
   deadline?: string;
@@ -161,6 +165,44 @@ export interface ScrapedData {
   keyActionSteps?: string | null;
   scrapeSuccess?: boolean;
 }
+
+export interface Preferences {
+  targetTitles: string[];
+  preferredLocations: string[];
+  preferredJobTypes: string[];
+  updatedAt: string;
+}
+
+export interface PreferencesInput {
+  /**
+     * @maxItems 20
+     * @items.minLength 1
+     * @items.maxLength 100
+     */
+  targetTitles: string[];
+  /**
+     * @maxItems 20
+     * @items.minLength 1
+     * @items.maxLength 100
+     */
+  preferredLocations: string[];
+  /**
+     * @maxItems 10
+     * @items.minLength 1
+     * @items.maxLength 50
+     */
+  preferredJobTypes: string[];
+}
+
+export interface ScoutResult {
+  success: boolean;
+  message: string;
+  discovered: number;
+  sent: number;
+  skipped: number;
+}
+
+export interface TelegramWebhookPayload { [key: string]: unknown }
 
 export interface Task {
   id: number;

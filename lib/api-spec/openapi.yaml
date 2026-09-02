@@ -20,6 +20,10 @@ tags:
     description: External integrations
   - name: dashboard
     description: Dashboard statistics
+  - name: preferences
+    description: Job scout search preferences
+  - name: scout
+    description: Automated job discovery
 
 paths:
   /healthz:
@@ -100,6 +104,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DashboardStats"
+
+  # Job scout preferences
+  /preferences:
+    get:
+      operationId: getPreferences
+      tags: [preferences]
+      summary: Get automated job scout preferences
+      responses:
+        "200":
+          description: Current search preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Preferences"
+    put:
+      operationId: updatePreferences
+      tags: [preferences]
+      summary: Replace automated job scout preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PreferencesInput"
+      responses:
+        "200":
+          description: Updated search preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Preferences"
+
+  # Automated scout
+  /cron/scout:
+    post:
+      operationId: runJobScout
+      tags: [scout]
+      summary: Run the automated job scout
+      responses:
+        "200":
+          description: Scout run result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoutResult"
+        "401":
+          description: Missing or invalid cron credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   # Opportunities
   /opportunities:
@@ -434,6 +489,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/TelegramResult"
 
+  /integrations/telegram-webhook:
+    post:
+      operationId: telegramWebhook
+      tags: [integrations]
+      summary: Receive Telegram messages and scout button callbacks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TelegramWebhookPayload"
+      responses:
+        "200":
+          description: Telegram update acknowledged
+
   /cron-daily-summary:
     post:
       operationId: cronDailySummary
@@ -523,6 +593,8 @@ components:
           type: string
         title:
           type: string
+        company:
+          type: ["string", "null"]
         type:
           type: string
           enum: [job, grant, hackathon, other]
@@ -552,6 +624,8 @@ components:
         title:
           type: string
           minLength: 1
+        company:
+          type: string
         type:
           type: string
           enum: [job, grant, hackathon, other]
@@ -573,6 +647,8 @@ components:
         title:
           type: string
           minLength: 1
+        company:
+          type: string
         type:
           type: string
           enum: [job, grant, hackathon, other]
@@ -611,6 +687,71 @@ components:
           type: ["string", "null"]
         scrapeSuccess:
           type: boolean
+
+    # Job scout
+    Preferences:
+      type: object
+      required: [targetTitles, preferredLocations, preferredJobTypes, updatedAt]
+      properties:
+        targetTitles:
+          type: array
+          items:
+            type: string
+        preferredLocations:
+          type: array
+          items:
+            type: string
+        preferredJobTypes:
+          type: array
+          items:
+            type: string
+        updatedAt:
+          type: string
+
+    PreferencesInput:
+      type: object
+      required: [targetTitles, preferredLocations, preferredJobTypes]
+      properties:
+        targetTitles:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+        preferredLocations:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+        preferredJobTypes:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+            minLength: 1
+            maxLength: 50
+
+    ScoutResult:
+      type: object
+      required: [success, message, discovered, sent, skipped]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        discovered:
+          type: number
+        sent:
+          type: number
+        skipped:
+          type: number
+
+    TelegramWebhookPayload:
+      type: object
+      additionalProperties: true
 
     # Tasks
     Task:

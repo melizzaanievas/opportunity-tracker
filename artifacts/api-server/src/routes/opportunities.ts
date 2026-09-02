@@ -34,6 +34,7 @@ router.get("/opportunities", requireAuth, async (req, res): Promise<void> => {
       id: opportunitiesTable.id,
       url: opportunitiesTable.url,
       title: opportunitiesTable.title,
+      company: opportunitiesTable.company,
       type: opportunitiesTable.type,
       status: opportunitiesTable.status,
       deadline: opportunitiesTable.deadline,
@@ -64,6 +65,7 @@ router.post("/opportunities", requireAuth, async (req, res): Promise<void> => {
     .values({
       url: parsed.data.url,
       title: parsed.data.title,
+      company: parsed.data.company ?? null,
       type: parsed.data.type,
       status: parsed.data.status,
       deadline: parsed.data.deadline ?? null,
@@ -110,6 +112,7 @@ router.get("/opportunities/:id", requireAuth, async (req, res): Promise<void> =>
       id: opportunitiesTable.id,
       url: opportunitiesTable.url,
       title: opportunitiesTable.title,
+      company: opportunitiesTable.company,
       type: opportunitiesTable.type,
       status: opportunitiesTable.status,
       deadline: opportunitiesTable.deadline,
@@ -148,6 +151,7 @@ router.patch("/opportunities/:id", requireAuth, async (req, res): Promise<void> 
   const updates: Record<string, unknown> = {};
   if (parsed.data.url !== undefined) updates.url = parsed.data.url;
   if (parsed.data.title !== undefined) updates.title = parsed.data.title;
+  if (parsed.data.company !== undefined) updates.company = parsed.data.company;
   if (parsed.data.type !== undefined) updates.type = parsed.data.type;
   if (parsed.data.status !== undefined) updates.status = parsed.data.status;
   if (parsed.data.deadline !== undefined) updates.deadline = parsed.data.deadline;

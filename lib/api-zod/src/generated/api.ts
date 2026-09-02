@@ -66,6 +66,60 @@ export const GetDashboardStatsResponse = zod.object({
 
 
 /**
+ * @summary Get automated job scout preferences
+ */
+export const GetPreferencesResponse = zod.object({
+  "targetTitles": zod.array(zod.string()),
+  "preferredLocations": zod.array(zod.string()),
+  "preferredJobTypes": zod.array(zod.string()),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Replace automated job scout preferences
+ */
+export const updatePreferencesBodyTargetTitlesItemMax = 100;
+
+export const updatePreferencesBodyTargetTitlesMax = 20;
+
+export const updatePreferencesBodyPreferredLocationsItemMax = 100;
+
+export const updatePreferencesBodyPreferredLocationsMax = 20;
+
+export const updatePreferencesBodyPreferredJobTypesItemMax = 50;
+
+export const updatePreferencesBodyPreferredJobTypesMax = 10;
+
+
+
+export const UpdatePreferencesBody = zod.object({
+  "targetTitles": zod.array(zod.string().min(1).max(updatePreferencesBodyTargetTitlesItemMax)).max(updatePreferencesBodyTargetTitlesMax),
+  "preferredLocations": zod.array(zod.string().min(1).max(updatePreferencesBodyPreferredLocationsItemMax)).max(updatePreferencesBodyPreferredLocationsMax),
+  "preferredJobTypes": zod.array(zod.string().min(1).max(updatePreferencesBodyPreferredJobTypesItemMax)).max(updatePreferencesBodyPreferredJobTypesMax)
+})
+
+export const UpdatePreferencesResponse = zod.object({
+  "targetTitles": zod.array(zod.string()),
+  "preferredLocations": zod.array(zod.string()),
+  "preferredJobTypes": zod.array(zod.string()),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Run the automated job scout
+ */
+export const RunJobScoutResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "discovered": zod.number(),
+  "sent": zod.number(),
+  "skipped": zod.number()
+})
+
+
+/**
  * @summary List all opportunities sorted by deadline
  */
 export const ListOpportunitiesQueryParams = zod.object({
@@ -77,6 +131,7 @@ export const ListOpportunitiesResponseItem = zod.object({
   "id": zod.number(),
   "url": zod.string(),
   "title": zod.string(),
+  "company": zod.string().nullish(),
   "type": zod.enum(['job', 'grant', 'hackathon', 'other']),
   "status": zod.enum(['to-apply', 'applied', 'interviewing', 'completed']),
   "deadline": zod.string().nullish().describe('ISO date string YYYY-MM-DD'),
@@ -98,6 +153,7 @@ export const ListOpportunitiesResponse = zod.array(ListOpportunitiesResponseItem
 export const CreateOpportunityBody = zod.object({
   "url": zod.string(),
   "title": zod.string().min(1),
+  "company": zod.string().optional(),
   "type": zod.enum(['job', 'grant', 'hackathon', 'other']),
   "status": zod.enum(['to-apply', 'applied', 'interviewing', 'completed']),
   "deadline": zod.string().optional(),
@@ -109,6 +165,7 @@ export const CreateOpportunityResponse = zod.object({
   "id": zod.number(),
   "url": zod.string(),
   "title": zod.string(),
+  "company": zod.string().nullish(),
   "type": zod.enum(['job', 'grant', 'hackathon', 'other']),
   "status": zod.enum(['to-apply', 'applied', 'interviewing', 'completed']),
   "deadline": zod.string().nullish().describe('ISO date string YYYY-MM-DD'),
@@ -151,6 +208,7 @@ export const GetOpportunityResponse = zod.object({
   "id": zod.number(),
   "url": zod.string(),
   "title": zod.string(),
+  "company": zod.string().nullish(),
   "type": zod.enum(['job', 'grant', 'hackathon', 'other']),
   "status": zod.enum(['to-apply', 'applied', 'interviewing', 'completed']),
   "deadline": zod.string().nullish().describe('ISO date string YYYY-MM-DD'),
@@ -175,6 +233,7 @@ export const UpdateOpportunityParams = zod.object({
 export const UpdateOpportunityBody = zod.object({
   "url": zod.string().optional(),
   "title": zod.string().min(1).optional(),
+  "company": zod.string().optional(),
   "type": zod.enum(['job', 'grant', 'hackathon', 'other']).optional(),
   "status": zod.enum(['to-apply', 'applied', 'interviewing', 'completed']).optional(),
   "deadline": zod.string().optional(),
@@ -186,6 +245,7 @@ export const UpdateOpportunityResponse = zod.object({
   "id": zod.number(),
   "url": zod.string(),
   "title": zod.string(),
+  "company": zod.string().nullish(),
   "type": zod.enum(['job', 'grant', 'hackathon', 'other']),
   "status": zod.enum(['to-apply', 'applied', 'interviewing', 'completed']),
   "deadline": zod.string().nullish().describe('ISO date string YYYY-MM-DD'),
@@ -317,6 +377,14 @@ export const TestTelegramAlertResponse = zod.object({
   "message": zod.string().nullish(),
   "sent": zod.number().optional()
 })
+
+
+/**
+ * @summary Receive Telegram messages and scout button callbacks
+ */
+export const TelegramWebhookBody = zod.record(zod.string(), zod.unknown())
+
+export const TelegramWebhookResponse = zod.unknown()
 
 
 /**

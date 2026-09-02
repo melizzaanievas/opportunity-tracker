@@ -31,12 +31,16 @@ import type {
   Opportunity,
   OpportunityInput,
   OpportunityPatch,
+  Preferences,
+  PreferencesInput,
+  ScoutResult,
   ScrapeRequest,
   ScrapedData,
   Task,
   TaskInput,
   TaskPatch,
-  TelegramResult
+  TelegramResult,
+  TelegramWebhookPayload
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -438,6 +442,225 @@ export function useGetDashboardStats<TData = Awaited<ReturnType<typeof getDashbo
 
 
 
+
+export const getGetPreferencesUrl = () => {
+
+
+
+
+  return `/api/preferences`
+}
+
+/**
+ * @summary Get automated job scout preferences
+ */
+export const getPreferences = async ( options?: Parameters<typeof customFetch>[1]): Promise<Preferences> => {
+
+  return customFetch<Preferences>(getGetPreferencesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPreferencesQueryKey = () => {
+    return [
+    `/api/preferences`
+    ] as const;
+    }
+
+
+export const getGetPreferencesQueryOptions = <TData = Awaited<ReturnType<typeof getPreferences>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPreferences>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPreferencesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPreferences>>> = ({ signal }) => getPreferences({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPreferences>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPreferencesQueryResult = NonNullable<Awaited<ReturnType<typeof getPreferences>>>
+export type GetPreferencesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get automated job scout preferences
+ */
+
+export function useGetPreferences<TData = Awaited<ReturnType<typeof getPreferences>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPreferences>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPreferencesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdatePreferencesUrl = () => {
+
+
+
+
+  return `/api/preferences`
+}
+
+/**
+ * @summary Replace automated job scout preferences
+ */
+export const updatePreferences = async (preferencesInput: PreferencesInput, options?: Parameters<typeof customFetch>[1]): Promise<Preferences> => {
+
+  return customFetch<Preferences>(getUpdatePreferencesUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(preferencesInput)
+  }
+);}
+
+
+
+
+
+export const getUpdatePreferencesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePreferences>>, TError,{data: BodyType<PreferencesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePreferences>>, TError,{data: BodyType<PreferencesInput>}, TContext> => {
+
+const mutationKey = ['updatePreferences'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePreferences>>, {data: BodyType<PreferencesInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updatePreferences(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePreferencesMutationResult = NonNullable<Awaited<ReturnType<typeof updatePreferences>>>
+    export type UpdatePreferencesMutationBody = BodyType<PreferencesInput>
+    export type UpdatePreferencesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Replace automated job scout preferences
+ */
+export const useUpdatePreferences = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePreferences>>, TError,{data: BodyType<PreferencesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePreferences>>,
+        TError,
+        {data: BodyType<PreferencesInput>},
+        TContext
+      > => {
+      return useMutation(getUpdatePreferencesMutationOptions(options));
+    }
+
+export const getRunJobScoutUrl = () => {
+
+
+
+
+  return `/api/cron/scout`
+}
+
+/**
+ * @summary Run the automated job scout
+ */
+export const runJobScout = async ( options?: Parameters<typeof customFetch>[1]): Promise<ScoutResult> => {
+
+  return customFetch<ScoutResult>(getRunJobScoutUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRunJobScoutMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runJobScout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof runJobScout>>, TError,void, TContext> => {
+
+const mutationKey = ['runJobScout'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof runJobScout>>, void> = () => {
+
+
+          return  runJobScout(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RunJobScoutMutationResult = NonNullable<Awaited<ReturnType<typeof runJobScout>>>
+
+    export type RunJobScoutMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Run the automated job scout
+ */
+export const useRunJobScout = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runJobScout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof runJobScout>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getRunJobScoutMutationOptions(options));
+    }
 
 export const getListOpportunitiesUrl = (params?: ListOpportunitiesParams,) => {
   const normalizedParams = new URLSearchParams();
@@ -1405,6 +1628,77 @@ export const useTestTelegramAlert = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getTestTelegramAlertMutationOptions(options));
+    }
+
+export const getTelegramWebhookUrl = () => {
+
+
+
+
+  return `/api/integrations/telegram-webhook`
+}
+
+/**
+ * @summary Receive Telegram messages and scout button callbacks
+ */
+export const telegramWebhook = async (telegramWebhookPayload: TelegramWebhookPayload, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getTelegramWebhookUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(telegramWebhookPayload)
+  }
+);}
+
+
+
+
+
+export const getTelegramWebhookMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof telegramWebhook>>, TError,{data: BodyType<TelegramWebhookPayload>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof telegramWebhook>>, TError,{data: BodyType<TelegramWebhookPayload>}, TContext> => {
+
+const mutationKey = ['telegramWebhook'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof telegramWebhook>>, {data: BodyType<TelegramWebhookPayload>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  telegramWebhook(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TelegramWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof telegramWebhook>>>
+    export type TelegramWebhookMutationBody = BodyType<TelegramWebhookPayload>
+    export type TelegramWebhookMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Receive Telegram messages and scout button callbacks
+ */
+export const useTelegramWebhook = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof telegramWebhook>>, TError,{data: BodyType<TelegramWebhookPayload>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof telegramWebhook>>,
+        TError,
+        {data: BodyType<TelegramWebhookPayload>},
+        TContext
+      > => {
+      return useMutation(getTelegramWebhookMutationOptions(options));
     }
 
 export const getCronDailySummaryUrl = () => {

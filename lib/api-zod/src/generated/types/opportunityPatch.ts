@@ -12,6 +12,7 @@ export interface OpportunityPatch {
   url?: string;
   /** @minLength 1 */
   title?: string;
+  company?: string;
   type?: OpportunityPatchType;
   status?: OpportunityPatchStatus;
   deadline?: string;

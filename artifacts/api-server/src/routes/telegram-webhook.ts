@@ -1,5 +1,6 @@
-import { Router, type IRouter } from "express";
-import { db, opportunitiesTable } from "../db";
+import { Router, type IRouter, type Request, type Response } from "express";
+import { eq } from "drizzle-orm";
+import { db, opportunitiesTable, scoutJobsTable } from "../db";
 import {
   cleanupTitle,
   resolveOpportunityTitle,
@@ -8,6 +9,11 @@ import {
 } from "../lib/scraper";
 import { logger } from "../lib/logger";
 import { buildGoogleCalendarUrl } from "../lib/google-calendar-link";
+import {
+  answerTelegramCallbackQuery,
+  editTelegramMessage,
+  escapeTelegramHtml,
+} from "../lib/telegram";
 
 const router: IRouter = Router();
 
@@ -22,6 +28,14 @@ interface TelegramUpdate {
     chat: { id: number | string };
     from?: { id: number | string; first_name?: string; username?: string };
     text?: string;
+  };
+  callback_query?: {
+    id: string;
+    data?: string;
+    message?: {
+      message_id: number;
+      chat: { id: number | string };
+    };
   };
 }
 
@@ -45,16 +59,146 @@ async function sendReply(chatId: number | string, text: string, replyToMessageId
   }
 }
 
+async function handleScoutCallback(
+  callbackQuery: NonNullable<TelegramUpdate["callback_query"]>,
+  configuredChatId: string,
+): Promise<void> {
+  const callbackMessage = callbackQuery.message;
+  if (
+    !callbackMessage ||
+    String(callbackMessage.chat.id) !== configuredChatId ||
+    !callbackQuery.data
+  ) {
+    return;
+  }
+
+  const match = /^(add_opp|ignore_opp):(\d+)$/.exec(callbackQuery.data);
+  if (!match) {
+    await answerTelegramCallbackQuery(callbackQuery.id, "Unknown scout action.");
+    return;
+  }
+
+  const action = match[1];
+  const jobId = Number(match[2]);
+  const [job] = await db
+    .select()
+    .from(scoutJobsTable)
+    .where(eq(scoutJobsTable.id, jobId));
+
+  if (!job) {
+    await answerTelegramCallbackQuery(callbackQuery.id, "This job alert has expired.");
+    return;
+  }
+
+  if (action === "ignore_opp") {
+    if (job.status === "added") {
+      await editTelegramMessage(
+        callbackMessage.chat.id,
+        callbackMessage.message_id,
+        `✅ <b>Added to Dashboard</b>\n\n${escapeTelegramHtml(job.title)}`,
+      );
+      await answerTelegramCallbackQuery(callbackQuery.id, "This job is already in your dashboard.");
+      return;
+    }
+    if (job.status === "ignored") {
+      await editTelegramMessage(
+        callbackMessage.chat.id,
+        callbackMessage.message_id,
+        `❌ <b>Ignored</b>\n\n${escapeTelegramHtml(job.title)}`,
+      );
+      await answerTelegramCallbackQuery(callbackQuery.id, "Already ignored.");
+      return;
+    }
+    if (job.status === "pending") {
+      await db
+        .update(scoutJobsTable)
+        .set({ status: "ignored" })
+        .where(eq(scoutJobsTable.id, job.id));
+    }
+    await editTelegramMessage(
+      callbackMessage.chat.id,
+      callbackMessage.message_id,
+      `❌ <b>Ignored</b>\n\n${escapeTelegramHtml(job.title)}`,
+    );
+    await answerTelegramCallbackQuery(callbackQuery.id, "Ignored.");
+    return;
+  }
+
+  if (job.status === "ignored") {
+    await answerTelegramCallbackQuery(callbackQuery.id, "This job was already ignored.");
+    return;
+  }
+
+  if (job.status === "added" && job.opportunityId) {
+    await editTelegramMessage(
+      callbackMessage.chat.id,
+      callbackMessage.message_id,
+      `✅ <b>Added to Dashboard</b>\n\n${escapeTelegramHtml(job.title)}`,
+    );
+    await answerTelegramCallbackQuery(callbackQuery.id, "Already in your dashboard.");
+    return;
+  }
+
+  const [existing] = await db
+    .select()
+    .from(opportunitiesTable)
+    .where(eq(opportunitiesTable.url, job.url));
+
+  let opportunityId = existing?.id;
+  if (!existing) {
+    const [inserted] = await db
+      .insert(opportunitiesTable)
+      .values({
+        url: job.url,
+        title: job.title,
+        company: job.company,
+        type: "job",
+        status: "to-apply",
+        summary: job.description,
+        createdAt: new Date().toISOString(),
+      })
+      .returning({ id: opportunitiesTable.id });
+    opportunityId = inserted?.id;
+  }
+
+  if (!opportunityId) {
+    await answerTelegramCallbackQuery(callbackQuery.id, "Could not add this job.");
+    return;
+  }
+
+  await db
+    .update(scoutJobsTable)
+    .set({ status: "added", opportunityId })
+    .where(eq(scoutJobsTable.id, job.id));
+
+  const company = job.company
+    ? `\n🏢 ${escapeTelegramHtml(job.company)}`
+    : "";
+  await editTelegramMessage(
+    callbackMessage.chat.id,
+    callbackMessage.message_id,
+    `✅ <b>Added to Dashboard</b>\n\n<b>${escapeTelegramHtml(job.title)}</b>${company}`,
+  );
+  await answerTelegramCallbackQuery(callbackQuery.id, "Added to your dashboard.");
+}
+
 /* ── Webhook endpoint (no session auth — called by Telegram's servers) ── */
-router.post("/telegram-webhook", async (req, res): Promise<void> => {
+async function handleTelegramUpdate(req: Request, res: Response): Promise<void> {
   // Always acknowledge immediately — Telegram retries on non-200
   res.sendStatus(200);
 
   const update = req.body as TelegramUpdate;
+  const configuredChatId = process.env.TELEGRAM_CHAT_ID;
+  if (!configuredChatId) return;
+
+  if (update?.callback_query) {
+    await handleScoutCallback(update.callback_query, String(configuredChatId));
+    return;
+  }
+
   const message = update?.message;
   if (!message?.text) return;
 
-  const configuredChatId = process.env.TELEGRAM_CHAT_ID;
   const incomingChatId = String(message.chat.id);
 
   // Security: only process messages from the configured chat
@@ -120,6 +264,9 @@ router.post("/telegram-webhook", async (req, res): Promise<void> => {
       messageId
     );
   }
-});
+}
+
+router.post("/telegram-webhook", handleTelegramUpdate);
+router.post("/integrations/telegram-webhook", handleTelegramUpdate);
 
 export default router;

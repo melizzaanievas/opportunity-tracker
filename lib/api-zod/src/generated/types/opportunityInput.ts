@@ -12,6 +12,7 @@ export interface OpportunityInput {
   url: string;
   /** @minLength 1 */
   title: string;
+  company?: string;
   type: OpportunityInputType;
   status: OpportunityInputStatus;
   deadline?: string;
