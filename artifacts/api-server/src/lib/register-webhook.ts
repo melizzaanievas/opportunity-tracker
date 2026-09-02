@@ -14,6 +14,22 @@ function getPublicBaseUrl(): string | null {
   return null;
 }
 
+function redactSensitiveValues(message: string, values: string[]): string {
+  return values.reduce(
+    (redacted, value) => (value ? redacted.replaceAll(value, "[REDACTED]") : redacted),
+    message,
+  );
+}
+
+function createRegistrationError(
+  webhookUrl: string,
+  reason: string,
+  sensitiveValues: string[],
+): Error {
+  const safeReason = redactSensitiveValues(reason, sensitiveValues);
+  return new Error(`Telegram webhook registration failed for ${webhookUrl}: ${safeReason}`);
+}
+
 export async function registerTelegramWebhook(): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) {
@@ -34,7 +50,9 @@ export async function registerTelegramWebhook(): Promise<void> {
   }
 
   const webhookUrl = `${base}/api/integrations/telegram-webhook`;
+  const sensitiveValues = [token, secretToken];
 
+  let data: { ok: boolean; description?: string; result?: boolean };
   try {
     const res = await fetch(
       `https://api.telegram.org/bot${token}/setWebhook`,
@@ -50,13 +68,19 @@ export async function registerTelegramWebhook(): Promise<void> {
       }
     );
 
-    const data = (await res.json()) as { ok: boolean; description?: string; result?: boolean };
-    if (data.ok) {
-      logger.info({ webhookUrl }, "Telegram webhook registered");
-    } else {
-      logger.error({ description: data.description, webhookUrl }, "Failed to register Telegram webhook");
-    }
+    data = (await res.json()) as { ok: boolean; description?: string; result?: boolean };
   } catch (err) {
-    logger.error({ err }, "Error calling Telegram setWebhook");
+    const reason = err instanceof Error ? err.message : String(err);
+    throw createRegistrationError(webhookUrl, reason, sensitiveValues);
   }
+
+  if (!data.ok) {
+    throw createRegistrationError(
+      webhookUrl,
+      data.description?.trim() || "Telegram did not provide a rejection description",
+      sensitiveValues,
+    );
+  }
+
+  logger.info({ webhookUrl }, "Telegram webhook registered");
 }

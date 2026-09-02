@@ -87,4 +87,49 @@ describe("Telegram webhook registration", () => {
 
     assert.equal(fetchCalls, 0);
   });
+
+  it("surfaces Telegram rejection details without exposing credentials", async () => {
+    process.env.REPLIT_DOMAINS = "example.replit.app";
+    delete process.env.REPLIT_DEV_DOMAIN;
+    process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
+    process.env.TELEGRAM_WEBHOOK_SECRET = TELEGRAM_WEBHOOK_SECRET;
+
+    const rejectionDescription = "Webhook URL must be HTTPS";
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      assert.equal(url, TELEGRAM_API_URL);
+      return new Response(
+        JSON.stringify({ ok: false, description: rejectionDescription }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }) as typeof fetch;
+
+    try {
+      await assert.rejects(
+        registerTelegramWebhook(),
+        (error: unknown) => {
+          assert(error instanceof Error);
+          assert.match(
+            error.message,
+            /https:\/\/example\.replit\.app\/api\/integrations\/telegram-webhook/,
+          );
+          assert.match(error.message, new RegExp(rejectionDescription));
+          assert.doesNotMatch(error.message, new RegExp(TELEGRAM_BOT_TOKEN));
+          assert.doesNotMatch(error.message, new RegExp(TELEGRAM_WEBHOOK_SECRET));
+          return true;
+        },
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });

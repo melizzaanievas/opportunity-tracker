@@ -27,5 +27,10 @@ app.listen(port, (err) => {
   startCronJobs();
   // Register Telegram webhook after a short delay to ensure the server is
   // fully accepting connections before Telegram tries to verify the URL.
-  setTimeout(() => { void registerTelegramWebhook(); }, 3000);
+  setTimeout(() => {
+    void registerTelegramWebhook().catch((err: unknown) => {
+      logger.fatal({ err }, "Telegram webhook registration failed; stopping startup");
+      process.exit(1);
+    });
+  }, 3000);
 });
