@@ -17,6 +17,7 @@ function getPublicBaseUrl(): string | null {
 const TELEGRAM_WEBHOOK_PATH = "/api/integrations/telegram-webhook";
 const TELEGRAM_WEBHOOK_MAX_ATTEMPTS = 3;
 const TELEGRAM_WEBHOOK_RETRY_DELAY_MS = 250;
+const TELEGRAM_WEBHOOK_MAX_RETRY_DELAY_MS = 5_000;
 
 export type TelegramWebhookRegistrationStatus =
   "pending" | "successful" | "failed";
@@ -89,9 +90,31 @@ function isRetryableTelegramStatus(status: number): boolean {
   );
 }
 
-function waitForRetry(): Promise<void> {
+function getTelegramRetryDelayMs(
+  status: number,
+  parameters: unknown,
+): number {
+  if (
+    status !== 429 ||
+    typeof parameters !== "object" ||
+    parameters === null ||
+    !("retry_after" in parameters) ||
+    typeof parameters.retry_after !== "number" ||
+    !Number.isFinite(parameters.retry_after) ||
+    parameters.retry_after <= 0
+  ) {
+    return TELEGRAM_WEBHOOK_RETRY_DELAY_MS;
+  }
+
+  return Math.min(
+    parameters.retry_after * 1_000,
+    TELEGRAM_WEBHOOK_MAX_RETRY_DELAY_MS,
+  );
+}
+
+function waitForRetry(delayMs: number): Promise<void> {
   return new Promise((resolve) => {
-    setTimeout(resolve, TELEGRAM_WEBHOOK_RETRY_DELAY_MS);
+    setTimeout(resolve, delayMs);
   });
 }
 
@@ -317,7 +340,11 @@ export async function registerTelegramWebhook(): Promise<void> {
   const webhookUrl = `${base}${TELEGRAM_WEBHOOK_PATH}`;
   const sensitiveValues = [token, secretToken];
 
-  let lastFailure: { description: string; retryable: boolean } | null = null;
+  let lastFailure: {
+    description: string;
+    retryable: boolean;
+    retryDelayMs: number;
+  } | null = null;
 
   for (
     let attempt = 1;
@@ -342,6 +369,7 @@ export async function registerTelegramWebhook(): Promise<void> {
         ok: boolean;
         description?: string;
         result?: boolean;
+        parameters?: unknown;
       };
 
       if (data.ok && res.ok) {
@@ -360,10 +388,15 @@ export async function registerTelegramWebhook(): Promise<void> {
       lastFailure = {
         description,
         retryable: isRetryableTelegramStatus(res.status),
+        retryDelayMs: getTelegramRetryDelayMs(res.status, data.parameters),
       };
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
-      lastFailure = { description: reason, retryable: true };
+      lastFailure = {
+        description: reason,
+        retryable: true,
+        retryDelayMs: TELEGRAM_WEBHOOK_RETRY_DELAY_MS,
+      };
     }
 
     if (!lastFailure.retryable || attempt === TELEGRAM_WEBHOOK_MAX_ATTEMPTS) {
@@ -378,7 +411,7 @@ export async function registerTelegramWebhook(): Promise<void> {
       },
       "Temporary Telegram webhook registration failure; retrying",
     );
-    await waitForRetry();
+    await waitForRetry(lastFailure.retryDelayMs);
   }
 
   const safeDescription = redactSensitiveValues(

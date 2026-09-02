@@ -211,6 +211,100 @@ describe("Telegram webhook registration", () => {
     assert.equal(getTelegramWebhookReadiness().status, "successful");
   });
 
+  it("uses Telegram's retry hint for a retryable rate-limit response", async () => {
+    process.env.REPLIT_DOMAINS = "example.replit.app";
+    delete process.env.REPLIT_DEV_DOMAIN;
+    process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
+    process.env.TELEGRAM_WEBHOOK_SECRET = TELEGRAM_WEBHOOK_SECRET;
+
+    const retryDelays: number[] = [];
+    const originalSetTimeout = globalThis.setTimeout;
+    const originalFetch = globalThis.fetch;
+    let fetchCalls = 0;
+    globalThis.setTimeout = ((callback, delay) => {
+      retryDelays.push(Number(delay));
+      callback();
+      return 0 as unknown as ReturnType<typeof setTimeout>;
+    }) as typeof setTimeout;
+    globalThis.fetch = (async () => {
+      fetchCalls += 1;
+      if (fetchCalls === 1) {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            description: "Too Many Requests",
+            parameters: { retry_after: 2 },
+          }),
+          {
+            status: 429,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof fetch;
+
+    try {
+      await registerTelegramWebhook();
+    } finally {
+      globalThis.setTimeout = originalSetTimeout;
+      globalThis.fetch = originalFetch;
+    }
+
+    assert.equal(fetchCalls, 2);
+    assert.deepEqual(retryDelays, [2_000]);
+  });
+
+  it("caps Telegram's retry hint so registration does not wait indefinitely", async () => {
+    process.env.REPLIT_DOMAINS = "example.replit.app";
+    delete process.env.REPLIT_DEV_DOMAIN;
+    process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
+    process.env.TELEGRAM_WEBHOOK_SECRET = TELEGRAM_WEBHOOK_SECRET;
+
+    const retryDelays: number[] = [];
+    const originalSetTimeout = globalThis.setTimeout;
+    const originalFetch = globalThis.fetch;
+    let fetchCalls = 0;
+    globalThis.setTimeout = ((callback, delay) => {
+      retryDelays.push(Number(delay));
+      callback();
+      return 0 as unknown as ReturnType<typeof setTimeout>;
+    }) as typeof setTimeout;
+    globalThis.fetch = (async () => {
+      fetchCalls += 1;
+      if (fetchCalls === 1) {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            description: "Too Many Requests",
+            parameters: { retry_after: 60 },
+          }),
+          {
+            status: 429,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof fetch;
+
+    try {
+      await registerTelegramWebhook();
+    } finally {
+      globalThis.setTimeout = originalSetTimeout;
+      globalThis.fetch = originalFetch;
+    }
+
+    assert.equal(fetchCalls, 2);
+    assert.deepEqual(retryDelays, [5_000]);
+  });
+
   it("skips registration when the webhook secret is missing", async () => {
     process.env.REPLIT_DOMAINS = "example.replit.app";
     delete process.env.REPLIT_DEV_DOMAIN;
