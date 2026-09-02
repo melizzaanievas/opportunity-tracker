@@ -212,6 +212,172 @@ function firstNonEmpty(...values: Array<string | null | undefined>): string | nu
   return null;
 }
 
+const BOILERPLATE_TITLE_STRINGS = [
+  "| Everyone's app platform",
+  "Security Check",
+  "Log In",
+  "Sign Up",
+  "| LinkedIn",
+  "- Google Forms",
+];
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Remove provider-owned suffixes and access-wall text before deciding whether
+ * a page title is useful to a person tracking the opportunity.
+ */
+export function cleanupTitle(value: string | null | undefined): string | null {
+  if (!value) return null;
+
+  let cleaned = cleanText(value);
+  for (const boilerplate of BOILERPLATE_TITLE_STRINGS) {
+    cleaned = cleaned.replace(new RegExp(escapeRegExp(boilerplate), "gi"), " ");
+  }
+
+  cleaned = cleanText(cleaned)
+    .replace(/^[|:–—-]+|[|:–—-]+$/g, "")
+    .replace(/\s+(?:or|and)\s*$/i, "")
+    .replace(/^[|:–—-]+|[|:–—-]+$/g, "");
+
+  if (
+    !cleaned ||
+    /^linkedin(?:\s*[:|-])?$/i.test(cleaned) ||
+    /^airtable$/i.test(cleaned) ||
+    /^google forms?$/i.test(cleaned)
+  ) {
+    return null;
+  }
+
+  return cleaned;
+}
+
+function getHostname(input: string): string {
+  try {
+    return new URL(input).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+export function getPlatformName(input: string): string | null {
+  const hostname = getHostname(input);
+  if (hostname === "airtable.com" || hostname.endsWith(".airtable.com")) return "Airtable";
+  if (hostname === "linkedin.com" || hostname.endsWith(".linkedin.com")) return "LinkedIn";
+  if (hostname === "forms.gle" || (hostname === "docs.google.com" && input.includes("/forms"))) {
+    return "Google Forms";
+  }
+  return null;
+}
+
+function isLinkedInJobsUrl(input: string): boolean {
+  try {
+    const parsed = new URL(input);
+    return (
+      (parsed.hostname === "linkedin.com" || parsed.hostname.endsWith(".linkedin.com")) &&
+      /^\/jobs(?:\/|$)/i.test(parsed.pathname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function humanizePathSegment(segment: string): string {
+  return cleanText(
+    decodeURIComponent(segment)
+      .replace(/\.[a-z0-9]+$/i, "")
+      .replace(/[-_+]+/g, " "),
+  ).replace(/\b[a-z]/g, (character) => character.toUpperCase());
+}
+
+function extractLinkedInPathTitle(input: string): string | null {
+  try {
+    const segments = new URL(input).pathname.split("/").filter(Boolean);
+    const viewIndex = segments.findIndex((segment) => segment.toLowerCase() === "view");
+    const candidate = viewIndex >= 0 ? segments[viewIndex + 1] : segments.at(-1);
+    if (!candidate) return null;
+
+    const title = humanizePathSegment(candidate);
+    if (!title) return null;
+    return /^\d+$/.test(title.replace(/\s/g, "")) ? `LinkedIn Job ${title}` : title;
+  } catch {
+    return null;
+  }
+}
+
+function extractAirtablePathTitle(input: string): string | null {
+  try {
+    const parsed = new URL(input);
+    const segments = parsed.pathname.split("/").filter(Boolean);
+    const isFormPath =
+      /\/(?:forms?|shr)[^/]*\/?/i.test(parsed.pathname) ||
+      segments.some((segment) => /^shr[a-z0-9]+$/i.test(segment));
+    if (isFormPath) return "Airtable Form Submission";
+
+    const baseId = segments.find((segment) => /^app[a-z0-9]+$/i.test(segment));
+    return baseId ? `Airtable Base ${baseId}` : null;
+  } catch {
+    return null;
+  }
+}
+
+function isGenericTitle(title: string | null, platform: string | null): boolean {
+  if (!title) return true;
+  if (/everyone's app platform/i.test(title)) return true;
+  if (/security check|log in|sign up/i.test(title)) return true;
+  if (
+    platform === "Airtable" &&
+    (/^airtable(?:\s*[|:-].*)?$/i.test(title) ||
+      /^airtable\b.*(?:low[- ]code platform|app platform)/i.test(title))
+  ) {
+    return true;
+  }
+  if (platform === "LinkedIn" && /^linkedin(?:\s+jobs?)?$/i.test(title)) return true;
+  if (platform === "Google Forms" && /^google forms?$/i.test(title)) return true;
+  return false;
+}
+
+function formatShortDate(deadline: string | null): string | null {
+  if (!deadline) return null;
+  const parsed = new Date(`${deadline}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(parsed);
+}
+
+function buildPlatformFallbackTitle(platform: string, deadline: string | null): string {
+  const shortDate = formatShortDate(deadline);
+  return `${platform} Opportunity${shortDate ? ` (${shortDate})` : ""}`;
+}
+
+export function resolveOpportunityTitle(
+  url: string,
+  scrapedTitle: string | null | undefined,
+  deadline: string | null,
+): string {
+  const platform = getPlatformName(url);
+  const title = cleanupTitle(scrapedTitle);
+
+  if (isLinkedInJobsUrl(url)) {
+    if (title && !isGenericTitle(title, platform)) return title;
+    return extractLinkedInPathTitle(url) ?? buildPlatformFallbackTitle("LinkedIn", deadline);
+  }
+
+  if (platform === "Airtable") {
+    if (title && !isGenericTitle(title, platform)) return title;
+    return extractAirtablePathTitle(url) ?? buildPlatformFallbackTitle("Airtable", deadline);
+  }
+
+  if (title && !isGenericTitle(title, platform)) return title;
+  if (platform) return buildPlatformFallbackTitle(platform, deadline);
+  return title ?? getHostname(url) ?? "Untitled Opportunity";
+}
+
 function toIsoDate(year: number, month: number, day: number): string | null {
   const parsed = new Date(Date.UTC(year, month - 1, day));
   if (
@@ -319,12 +485,13 @@ export async function scrapeUrl(url: string): Promise<ScrapedResult> {
     const html = await res.text();
     const $ = cheerio.load(html);
 
-    // Title
+    // Title candidates are cleaned and resolved after the deadline is known,
+    // because platform fallback titles can include a short deadline date.
     const ogTitle = $('meta[property="og:title"]').attr("content");
     const twitterTitle = $('meta[name="twitter:title"]').attr("content");
     const htmlTitle = $("title").text();
     const h1 = $("h1").first().text();
-    const title = firstNonEmpty(ogTitle, twitterTitle, htmlTitle, h1);
+    const pageTitle = firstNonEmpty(ogTitle, twitterTitle, htmlTitle, h1);
 
     // Remove noise before extracting body text so navigation dates and
     // unrelated footer timestamps do not become the opportunity deadline.
@@ -350,6 +517,7 @@ export async function scrapeUrl(url: string): Promise<ScrapedResult> {
       .filter((value): value is string => Boolean(value))
       .join(" ");
     const deadline = extractDate(deadlineMetadata) ?? extractDate(bodyText);
+    const title = resolveOpportunityTitle(initialUrl.href, pageTitle, deadline);
 
     // Key action steps from lists
     const listItems: string[] = [];
