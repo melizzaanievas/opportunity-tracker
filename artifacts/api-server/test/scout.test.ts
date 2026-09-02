@@ -58,6 +58,7 @@ async function postScoutCallback(
   baseUrl: string,
   callbackId: string,
   data: string,
+  chatId: number | string = TELEGRAM_CHAT_ID,
 ): Promise<void> {
   const response = await fetch(`${baseUrl}/api/integrations/telegram-webhook`, {
     method: "POST",
@@ -69,7 +70,7 @@ async function postScoutCallback(
         data,
         message: {
           message_id: 900,
-          chat: { id: TELEGRAM_CHAT_ID },
+          chat: { id: chatId },
         },
       },
     }),
@@ -244,6 +245,74 @@ describe("job scout Telegram alerts", () => {
           ).length,
           2,
         );
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("ignores scout callbacks from an untrusted chat", async () => {
+    const [job] = await db
+      .insert(scoutJobsTable)
+      .values({
+        sourceId: "untrusted-chat-scout-123",
+        source: "Test feed",
+        title: "Senior Product Engineer",
+        company: "Example & Co",
+        url: SCOUT_JOB_URL,
+        description: "Build useful things.",
+        discoveredAt: new Date().toISOString(),
+      })
+      .returning({ id: scoutJobsTable.id });
+    assert.ok(job);
+
+    const calls: TelegramCall[] = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input, init) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      if (!url.startsWith("https://api.telegram.org/")) {
+        return originalFetch(input, init);
+      }
+      const method = url.slice(url.lastIndexOf("/") + 1);
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      calls.push({ method, body });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof fetch;
+
+    try {
+      const app = express();
+      app.use(express.json());
+      app.use("/api", createTelegramWebhookRouter());
+
+      await withServer(app, async (baseUrl) => {
+        await postScoutCallback(
+          baseUrl,
+          "untrusted-chat-1",
+          `add_opp:${job.id}`,
+          "another-chat",
+        );
+
+        const [jobAfterCallback] = await db
+          .select()
+          .from(scoutJobsTable)
+          .where(eq(scoutJobsTable.id, job.id));
+        const opportunities = await db
+          .select()
+          .from(opportunitiesTable)
+          .where(eq(opportunitiesTable.url, SCOUT_JOB_URL));
+
+        assert.equal(calls.length, 0);
+        assert.equal(jobAfterCallback?.status, "pending");
+        assert.equal(jobAfterCallback?.opportunityId, null);
+        assert.equal(opportunities.length, 0);
       });
     } finally {
       globalThis.fetch = originalFetch;
