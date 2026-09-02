@@ -48,6 +48,7 @@ export default function AddOpportunity() {
             ...prev,
             url: data.url,
             title: data.title || "",
+            type: data.type as OpportunityInputType,
             deadline: data.deadline || "",
             summary: data.summary?.trim() || "",
             keyActionSteps: data.keyActionSteps || ""
@@ -101,7 +102,7 @@ export default function AddOpportunity() {
 
         <div className="mb-8">
           <h1 className="new-opportunity-title text-4xl font-serif font-bold tracking-tight mb-2">New Opportunity</h1>
-          <p className="new-opportunity-description">Add a job, grant, or hackathon you want to track.</p>
+          <p className="new-opportunity-description">Add a job, grant, casting opportunity, or competition you want to track.</p>
         </div>
 
         {!isManual ? (
@@ -160,7 +161,9 @@ export default function AddOpportunity() {
                       <SelectContent>
                         <SelectItem value="job">Job</SelectItem>
                         <SelectItem value="grant">Grant</SelectItem>
-                        <SelectItem value="hackathon">Hackathon</SelectItem>
+                        <SelectItem value="casting">Casting</SelectItem>
+                        <SelectItem value="singing-competition">Singing Competition</SelectItem>
+                        <SelectItem value="grant-fellowship">Grant / Fellowship</SelectItem>
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
@@ -171,9 +174,10 @@ export default function AddOpportunity() {
                       <SelectTrigger className="new-opportunity-select"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="to-apply">To Apply</SelectItem>
-                        <SelectItem value="applied">Applied</SelectItem>
+                        <SelectItem value="applied">Applied / Pending Response</SelectItem>
                         <SelectItem value="interviewing">Interviewing</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="offered">Offered</SelectItem>
+                        <SelectItem value="archived">Archived</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

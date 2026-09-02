@@ -84,7 +84,7 @@ describe("save-flow metadata wiring", () => {
   it("returns normalized provider titles and blank boilerplate summaries from the add-form scrape endpoint", async () => {
     const cases = [
       ["linkedin-generic.html", "LinkedIn Job 123456789"],
-      ["airtable-generic.html", "Airtable Base appABC123"],
+      ["airtable-generic.html", "Airtable Form Application"],
     ] as const;
 
     for (const [filename, expectedTitle] of cases) {

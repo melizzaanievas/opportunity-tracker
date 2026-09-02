@@ -10,5 +10,6 @@ export type DashboardStatsByStatus = {
   'to-apply': number;
   applied: number;
   interviewing: number;
-  completed: number;
+  offered: number;
+  archived: number;
 };

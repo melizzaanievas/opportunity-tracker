@@ -12,6 +12,8 @@ export type OpportunityType = typeof OpportunityType[keyof typeof OpportunityTyp
 export const OpportunityType = {
   job: 'job',
   grant: 'grant',
-  hackathon: 'hackathon',
+  casting: 'casting',
+  'singing-competition': 'singing-competition',
+  'grant-fellowship': 'grant-fellowship',
   other: 'other',
 } as const;

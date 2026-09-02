@@ -13,6 +13,38 @@ async function fixture(name: string): Promise<string> {
 }
 
 describe("scraper metadata fallbacks", () => {
+  it("detects singing competitions from page titles and text", () => {
+    const result = parseScrapedHtml(
+      "https://opportunities.example.org/open-call",
+      "<html><head><title>Vocal Talent Call</title></head><body><h1>Annual singing competition</h1></body></html>",
+    );
+
+    assert.equal(result.type, "singing-competition");
+  });
+
+  it("detects casting opportunities and grants from page text", () => {
+    const casting = parseScrapedHtml(
+      "https://opportunities.example.org/audition",
+      "<html><body><h1>Performer audition</h1><p>Submit your role proposal.</p></body></html>",
+    );
+    const grant = parseScrapedHtml(
+      "https://opportunities.example.org/funding",
+      "<html><body><h1>Community funding</h1><p>Grant proposal applications are open.</p></body></html>",
+    );
+
+    assert.equal(casting.type, "casting");
+    assert.equal(grant.type, "grant");
+  });
+
+  it("defaults an unspecified opportunity to a job", () => {
+    const result = parseScrapedHtml(
+      "https://opportunities.example.org/open-call",
+      "<html><head><title>Community opportunity</title></head><body><p>Apply online.</p></body></html>",
+    );
+
+    assert.equal(result.type, "job");
+  });
+
   it("keeps meaningful Open Graph title and summary metadata", async () => {
     const result = parseScrapedHtml(
       "https://opportunities.example.org/community-grant",
@@ -89,7 +121,7 @@ describe("provider fallback titles", () => {
       await fixture("airtable-generic.html"),
     );
 
-    assert.equal(result.title, "Airtable Base appABC123");
+    assert.equal(result.title, "Airtable Form Application");
   });
 
   it("normalizes an Airtable form path", () => {
@@ -99,7 +131,18 @@ describe("provider fallback titles", () => {
         "Airtable",
         null,
       ),
-      "Airtable Form Submission",
+      "Airtable Form Application",
+    );
+  });
+
+  it("preserves an explicit Airtable title", () => {
+    assert.equal(
+      resolveOpportunityTitle(
+        "https://airtable.com/shrExample123",
+        "2027 Accessibility Fellowship Application",
+        null,
+      ),
+      "2027 Accessibility Fellowship Application",
     );
   });
 

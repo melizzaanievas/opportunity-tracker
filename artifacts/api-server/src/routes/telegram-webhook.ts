@@ -263,7 +263,7 @@ export function createTelegramWebhookRouter(
         .values({
           url,
           title,
-          type: "other",
+          type: scraped.type,
           status: "to-apply",
           deadline: scraped.deadline ?? null,
           summary: scraped.summary ?? null,

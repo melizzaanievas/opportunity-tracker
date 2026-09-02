@@ -12,6 +12,8 @@ export type OpportunityPatchType = typeof OpportunityPatchType[keyof typeof Oppo
 export const OpportunityPatchType = {
   job: 'job',
   grant: 'grant',
-  hackathon: 'hackathon',
+  casting: 'casting',
+  'singing-competition': 'singing-competition',
+  'grant-fellowship': 'grant-fellowship',
   other: 'other',
 } as const;

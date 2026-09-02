@@ -9,6 +9,8 @@
 export type DashboardStatsByType = {
   job: number;
   grant: number;
-  hackathon: number;
+  casting: number;
+  'singing-competition': number;
+  'grant-fellowship': number;
   other: number;
 };

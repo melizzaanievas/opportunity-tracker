@@ -130,7 +130,7 @@ export async function buildDailySummary(): Promise<{ text: string; count: number
       and(
         gte(opportunitiesTable.deadline, todayStr),
         lte(opportunitiesTable.deadline, sevenDaysStr),
-        ne(opportunitiesTable.status, "completed")
+        ne(opportunitiesTable.status, "archived")
       )
     );
 

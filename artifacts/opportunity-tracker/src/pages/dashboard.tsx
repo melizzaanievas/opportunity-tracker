@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { differenceInCalendarDays, format } from "date-fns";
 import {
@@ -28,24 +28,52 @@ import {
   Banknote,
   Briefcase,
   CalendarDays,
+  Clapperboard,
   CheckCircle2,
   Circle,
-  Code,
   Columns3,
   ExternalLink,
   FileQuestion,
   Grid2X2,
   Loader2,
+  Mic2,
   Plus,
   Send,
+  GraduationCap,
+  Sparkles,
 } from "lucide-react";
 
 const TYPE_ICONS = {
   job: Briefcase,
   grant: Banknote,
-  hackathon: Code,
+  casting: Clapperboard,
+  "singing-competition": Mic2,
+  "grant-fellowship": GraduationCap,
   other: FileQuestion,
 };
+
+const CATEGORY_OPTIONS = [
+  { value: "job", label: "Jobs", singularLabel: "Job", icon: Briefcase },
+  { value: "grant", label: "Grants", singularLabel: "Grant", icon: Banknote },
+  { value: "casting", label: "Casting", singularLabel: "Casting", icon: Clapperboard },
+  {
+    value: "singing-competition",
+    label: "Singing Competitions",
+    singularLabel: "Singing Competition",
+    icon: Mic2,
+  },
+  {
+    value: "grant-fellowship",
+    label: "Grant / Fellowship",
+    singularLabel: "Grant / Fellowship",
+    icon: GraduationCap,
+  },
+  { value: "other", label: "Other", singularLabel: "Other", icon: FileQuestion },
+] as const;
+
+const CATEGORY_LABELS = Object.fromEntries(
+  CATEGORY_OPTIONS.map((category) => [category.value, category.singularLabel]),
+) as Record<(typeof CATEGORY_OPTIONS)[number]["value"], string>;
 
 const STATUS_CONFIG: Record<
   string,
@@ -58,10 +86,10 @@ const STATUS_CONFIG: Record<
       "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-200",
   },
   applied: {
-    label: "Applied",
-    dot: "#059669",
+    label: "Applied / Pending Response",
+    dot: "#2563eb",
     badgeClass:
-      "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-200",
+      "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-400/30 dark:bg-blue-400/10 dark:text-blue-200",
   },
   interviewing: {
     label: "Interviewing",
@@ -69,20 +97,38 @@ const STATUS_CONFIG: Record<
     badgeClass:
       "border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-400/30 dark:bg-indigo-400/10 dark:text-indigo-200",
   },
-  completed: {
-    label: "Completed",
-    dot: "#0f766e",
+  offered: {
+    label: "Offered",
+    dot: "#9333ea",
     badgeClass:
-      "border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-400/30 dark:bg-teal-400/10 dark:text-teal-200",
+      "border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-400/30 dark:bg-purple-400/10 dark:text-purple-200",
+  },
+  archived: {
+    label: "Archived",
+    dot: "#64748b",
+    badgeClass:
+      "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-400/30 dark:bg-slate-400/10 dark:text-slate-200",
   },
 };
+
+const BREAKDOWN_STAGES = [
+  { label: "To Apply", statuses: ["to-apply"] },
+  { label: "Applied / Pending Response", statuses: ["applied"] },
+  { label: "Interviewing / Shortlisted", statuses: ["interviewing"] },
+  {
+    label: "Completed",
+    statuses: ["offered", "archived"],
+    description: "Offered or archived",
+  },
+] as const;
 
 const FILTERS: { value: ListOpportunitiesStatus | "all"; label: string }[] = [
   { value: "all",       label: "All"      },
   { value: "to-apply",  label: "To Apply" },
-  { value: "applied",   label: "Applied"  },
+  { value: "applied",   label: "Applied / Pending Response" },
   { value: "interviewing", label: "Interviewing" },
-  { value: "completed", label: "Done"     },
+  { value: "offered", label: "Offered" },
+  { value: "archived", label: "Archived" },
 ];
 
 type DashboardView = "grid" | "kanban" | "calendar";
@@ -103,9 +149,10 @@ const KANBAN_COLUMNS: {
   accent: string;
 }[] = [
   { value: "to-apply", label: "To Apply", accent: "kanban-lane-amber" },
-  { value: "applied", label: "Applied", accent: "kanban-lane-blue" },
+  { value: "applied", label: "Applied / Pending Response", accent: "kanban-lane-blue" },
   { value: "interviewing", label: "Interviewing", accent: "kanban-lane-emerald" },
-  { value: "completed", label: "Done", accent: "kanban-lane-slate" },
+  { value: "offered", label: "Offered", accent: "kanban-lane-purple" },
+  { value: "archived", label: "Archived", accent: "kanban-lane-slate" },
 ];
 
 function formatDisplayDate(deadline: string) {
@@ -113,8 +160,64 @@ function formatDisplayDate(deadline: string) {
   return format(new Date(year, month - 1, day), "MMM d, yyyy");
 }
 
+const DASHBOARD_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  weekday: "long",
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+});
+
+const FALLBACK_QUOTES = [
+  {
+    text: "The only way to do great work is to love what you do.",
+    author: "Steve Jobs",
+  },
+  {
+    text: "Success is where preparation and opportunity meet.",
+    author: "Seneca",
+  },
+  {
+    text: "Great things are done by a series of small things brought together.",
+    author: "Vincent van Gogh",
+  },
+  {
+    text: "Start where you are. Use what you have. Do what you can.",
+    author: "Arthur Ashe",
+  },
+  {
+    text: "It always seems impossible until it is done.",
+    author: "Nelson Mandela",
+  },
+] as const;
+
+type DashboardQuote = {
+  text: string;
+  author: string;
+};
+
+function getDailyFallbackQuote(date: Date): DashboardQuote {
+  const dayNumber = Math.floor(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) /
+      (24 * 60 * 60 * 1000),
+  );
+  return FALLBACK_QUOTES[Math.abs(dayNumber) % FALLBACK_QUOTES.length];
+}
+
+function getDashboardGreeting(date: Date) {
+  const hour = date.getHours();
+  if (hour < 12) return "Good morning, Melizza";
+  if (hour < 18) return "Good afternoon, Melizza";
+  return "Good evening, Melizza";
+}
+
 export default function Dashboard() {
+  const [currentDate, setCurrentDate] = useState(() => new Date());
+  const [quote, setQuote] = useState<DashboardQuote>(() =>
+    getDailyFallbackQuote(new Date()),
+  );
   const [statusFilter, setStatusFilter] = useState<ListOpportunitiesStatus | "all">("all");
+  const [categoryFilter, setCategoryFilter] =
+    useState<Opportunity["type"] | "all">("all");
   const [viewMode, setViewMode] = useState<DashboardView>("grid");
   const [selectedOpportunity, setSelectedOpportunity] =
     useState<Opportunity | null>(null);
@@ -122,11 +225,62 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
 
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
+  const { data: allOpportunities, isLoading: allOpportunitiesLoading } =
+    useListOpportunities();
   const { data: opportunities, isLoading: opsLoading } = useListOpportunities(
-    statusFilter === "all" ? undefined : { status: statusFilter }
+    statusFilter === "all" && categoryFilter === "all"
+      ? undefined
+      : {
+          ...(statusFilter === "all" ? {} : { status: statusFilter }),
+          ...(categoryFilter === "all" ? {} : { type: categoryFilter }),
+        },
   );
   const testTelegram = useTestTelegramAlert();
   const updateOpportunity = useUpdateOpportunity();
+
+  useEffect(() => {
+    const clock = window.setInterval(() => setCurrentDate(new Date()), 60_000);
+    return () => window.clearInterval(clock);
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetch("https://zenquotes.io/api/today", {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error("Quote request failed");
+        return response.json() as Promise<Array<{ q?: string; a?: string }>>;
+      })
+      .then((data) => {
+        const todayQuote = data[0];
+        if (todayQuote?.q?.trim() && todayQuote.a?.trim()) {
+          setQuote({ text: todayQuote.q.trim(), author: todayQuote.a.trim() });
+        }
+      })
+      .catch(() => {
+        // The local quote is intentionally retained when the public API is unavailable.
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  const breakdownRows = useMemo(() => {
+    const source = allOpportunities ?? [];
+    return CATEGORY_OPTIONS.map((category) => ({
+      ...category,
+      counts: BREAKDOWN_STAGES.map((stage) =>
+        source.filter(
+          (opportunity) =>
+            opportunity.type === category.value &&
+            (stage.statuses as readonly string[]).includes(opportunity.status),
+        ).length,
+      ),
+      total: source.filter((opportunity) => opportunity.type === category.value).length,
+    }));
+  }, [allOpportunities]);
 
   const handleTestAlert = () => {
     testTelegram.mutate(undefined, {
@@ -136,7 +290,7 @@ export default function Dashboard() {
   };
 
   const activeOpportunityCount = stats
-    ? Math.max(0, stats.total - stats.byStatus.completed)
+    ? Math.max(0, stats.total - stats.byStatus.archived)
     : 0;
 
   const handleSetDeadline = (opportunityId: number, deadline: string) => {
@@ -237,7 +391,7 @@ export default function Dashboard() {
               <div className="dashboard-type-icon">
                 <Icon className="h-5 w-5" />
               </div>
-              <span className="dashboard-type-label">{opp.type}</span>
+              <span className="dashboard-type-label">{CATEGORY_LABELS[opp.type]}</span>
             </div>
             <div className="pointer-events-auto">{renderDeadlineBadge(opp.deadline)}</div>
           </div>
@@ -323,6 +477,39 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="space-y-8 pb-12">
+        <section
+          className="dashboard-date-quote-banner mb-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-md"
+          aria-labelledby="dashboard-welcome-title"
+          data-testid="dashboard-date-quote-banner"
+        >
+          <div className="dashboard-date-quote-layout">
+            <div className="dashboard-welcome-block">
+              <div className="dashboard-welcome-heading">
+                <Sparkles className="h-5 w-5 shrink-0 text-indigo-300" aria-hidden="true" />
+                <div>
+                  <p className="dashboard-section-kicker">Daily check-in</p>
+                  <h2 id="dashboard-welcome-title" className="dashboard-welcome-title">
+                    <span>{getDashboardGreeting(currentDate)}</span>
+                    <span className="dashboard-welcome-separator" aria-hidden="true">·</span>
+                    <time dateTime={currentDate.toISOString().slice(0, 10)}>
+                      {DASHBOARD_DATE_FORMATTER.format(currentDate)}
+                    </time>
+                  </h2>
+                </div>
+              </div>
+            </div>
+            <div className="dashboard-quote-block">
+              <p className="dashboard-quote-label">Today&apos;s motivation</p>
+              <blockquote className="dashboard-quote-text text-slate-300 italic">
+                “{quote.text}”
+              </blockquote>
+              <cite className="dashboard-quote-author text-indigo-400 font-medium">
+                — {quote.author}
+              </cite>
+            </div>
+          </div>
+        </section>
+
         <section className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="mb-3 flex flex-wrap items-center gap-3">
@@ -430,6 +617,112 @@ export default function Dashboard() {
             </div>
           </div>
         ) : null}
+
+        <section
+          className="dashboard-breakdown-section"
+          aria-labelledby="productivity-breakdown-title"
+        >
+          <div className="dashboard-breakdown-heading">
+            <div>
+              <p className="dashboard-section-kicker">Productivity tracking</p>
+              <h2 id="productivity-breakdown-title" className="dashboard-section-title">
+                Productivity &amp; Pipeline Breakdown
+              </h2>
+              <p className="dashboard-breakdown-copy">
+                See where each opportunity category sits in your pipeline.
+              </p>
+            </div>
+            <div
+              className="dashboard-category-filter-row"
+              role="toolbar"
+              aria-label="Filter opportunities by category"
+            >
+              <button
+                type="button"
+                className={`dashboard-category-filter ${categoryFilter === "all" ? "is-active" : ""}`}
+                onClick={() => setCategoryFilter("all")}
+                aria-pressed={categoryFilter === "all"}
+                data-testid="button-category-filter-all"
+              >
+                All categories
+              </button>
+              {CATEGORY_OPTIONS.map(({ value, label, icon: Icon }) => {
+                const active = categoryFilter === value;
+                return (
+                  <button
+                    type="button"
+                    className={`dashboard-category-filter ${active ? "is-active" : ""}`}
+                    key={value}
+                    onClick={() => setCategoryFilter(value)}
+                    aria-pressed={active}
+                    data-testid={`button-category-filter-${value}`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {allOpportunitiesLoading ? (
+            <div className="dashboard-breakdown-loading" aria-label="Loading productivity breakdown">
+              <div />
+              <div />
+              <div />
+              <div />
+            </div>
+          ) : (
+            <div className="dashboard-breakdown-matrix" role="table">
+              <div className="dashboard-breakdown-row dashboard-breakdown-header" role="row">
+                <div className="dashboard-breakdown-category-cell" role="columnheader">
+                  Category
+                </div>
+                {BREAKDOWN_STAGES.map((stage) => (
+                  <div
+                    className="dashboard-breakdown-stage-cell"
+                    role="columnheader"
+                    key={stage.label}
+                    title={"description" in stage ? stage.description : ""}
+                  >
+                    {stage.label}
+                  </div>
+                ))}
+                <div className="dashboard-breakdown-total-cell" role="columnheader">
+                  Total
+                </div>
+              </div>
+              {breakdownRows.map(({ value, label, icon: Icon, counts, total }) => (
+                <div className="dashboard-breakdown-row" role="row" key={value}>
+                  <button
+                    type="button"
+                    className={`dashboard-breakdown-category-cell dashboard-breakdown-category-button ${categoryFilter === value ? "is-active" : ""}`}
+                    onClick={() => setCategoryFilter(value)}
+                    aria-pressed={categoryFilter === value}
+                    role="rowheader"
+                    data-testid={`button-breakdown-category-${value}`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{label}</span>
+                  </button>
+                  {counts.map((count, index) => (
+                    <div
+                      className="dashboard-breakdown-stage-cell dashboard-breakdown-count"
+                      role="cell"
+                      key={`${value}-${BREAKDOWN_STAGES[index]?.label}`}
+                      aria-label={`${count} ${label} opportunities in ${BREAKDOWN_STAGES[index]?.label}`}
+                    >
+                      {count}
+                    </div>
+                  ))}
+                  <div className="dashboard-breakdown-total-cell" role="cell">
+                    {total}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         <section className="space-y-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

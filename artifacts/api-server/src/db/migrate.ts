@@ -68,5 +68,10 @@ export function runMigrations(client: BetterSqlite3.Database): void {
     client.exec("ALTER TABLE opportunities ADD COLUMN company TEXT");
   }
 
+  // Preserve existing completed opportunities under the new pipeline name.
+  client.exec("UPDATE opportunities SET status = 'archived' WHERE status = 'completed'");
+  // Preserve legacy opportunity categories under the expanded vocabulary.
+  client.exec("UPDATE opportunities SET type = 'other' WHERE type = 'hackathon'");
+
   logger.info("Migrations complete.");
 }

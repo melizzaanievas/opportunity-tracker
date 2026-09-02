@@ -11,6 +11,8 @@ import {
   useDeleteTask,
   getGetOpportunityQueryKey,
   getListTasksQueryKey,
+  getListOpportunitiesQueryKey,
+  getGetDashboardStatsQueryKey,
   OpportunityPatch,
   OpportunityPatchStatus,
   OpportunityPatchType
@@ -40,6 +42,19 @@ import {
   AlignLeft,
   ListTodo
 } from "lucide-react";
+
+const STATUS_OPTIONS: Array<{ value: OpportunityPatchStatus; label: string }> = [
+  { value: "to-apply", label: "To Apply" },
+  { value: "applied", label: "Applied / Pending Response" },
+  { value: "interviewing", label: "Interviewing" },
+  { value: "offered", label: "Offered" },
+  { value: "archived", label: "Archived" },
+];
+
+function statusLabel(status: string): string {
+  return STATUS_OPTIONS.find((option) => option.value === status)?.label
+    ?? status.replace(/-/g, " ");
+}
 
 export default function OpportunityDetail() {
   const { id } = useParams();
@@ -88,10 +103,46 @@ export default function OpportunityDetail() {
       {
         onSuccess: (data) => {
           queryClient.setQueryData(getGetOpportunityQueryKey(numId), data);
+          queryClient.invalidateQueries({
+            queryKey: getListOpportunitiesQueryKey(),
+          });
+          queryClient.invalidateQueries({
+            queryKey: getGetDashboardStatsQueryKey(),
+          });
           setIsEditModalOpen(false);
           toast({ title: "Updated successfully" });
         }
       }
+    );
+  };
+
+  const handleQuickStatusChange = (status: OpportunityPatchStatus) => {
+    if (!opp || status === opp.status) return;
+
+    updateOpp.mutate(
+      { id: numId, data: { status } },
+      {
+        onSuccess: (data) => {
+          queryClient.setQueryData(getGetOpportunityQueryKey(numId), data);
+          queryClient.invalidateQueries({
+            queryKey: getListOpportunitiesQueryKey(),
+          });
+          queryClient.invalidateQueries({
+            queryKey: getGetDashboardStatsQueryKey(),
+          });
+          toast({
+            title: "Status updated",
+            description: `Moved to ${statusLabel(status)}.`,
+          });
+        },
+        onError: () => {
+          toast({
+            title: "Could not update status",
+            description: "Please try again.",
+            variant: "destructive",
+          });
+        },
+      },
     );
   };
 
@@ -262,10 +313,38 @@ export default function OpportunityDetail() {
               <PillTag color="rgba(243,229,171,0.12)" textColor="#F3E5AB" borderColor="rgba(243,229,171,0.35)">
                 {opp.type}
               </PillTag>
-              {/* Status tag */}
-              <PillTag color="rgba(255,255,255,0.06)" textColor="#c4b5fd" borderColor="rgba(196,181,253,0.3)">
-                {opp.status.replace('-', ' ')}
-              </PillTag>
+              {/* Quick status selector */}
+              <Select
+                value={opp.status}
+                onValueChange={(value) => handleQuickStatusChange(value as OpportunityPatchStatus)}
+                disabled={updateOpp.isPending}
+              >
+                <SelectTrigger
+                  className="opportunity-quick-status-trigger"
+                  aria-label="Change opportunity status"
+                  style={{
+                    fontFamily: sans,
+                    fontSize: "0.7rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    padding: "3px 10px",
+                    borderRadius: "999px",
+                    background: "rgba(255,255,255,0.06)",
+                    color: "#c4b5fd",
+                    border: "1px solid rgba(196,181,253,0.3)",
+                  }}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {/* Deadline tag */}
               {opp.deadline && (
                 <span className="flex items-center gap-1.5" style={{
@@ -508,7 +587,9 @@ export default function OpportunityDetail() {
                     <SelectContent>
                       <SelectItem value="job">Job</SelectItem>
                       <SelectItem value="grant">Grant</SelectItem>
-                      <SelectItem value="hackathon">Hackathon</SelectItem>
+                       <SelectItem value="casting">Casting</SelectItem>
+                       <SelectItem value="singing-competition">Singing Competition</SelectItem>
+                       <SelectItem value="grant-fellowship">Grant / Fellowship</SelectItem>
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
@@ -519,9 +600,10 @@ export default function OpportunityDetail() {
                     <SelectTrigger className="ethereal-dialog-field"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="to-apply">To Apply</SelectItem>
-                      <SelectItem value="applied">Applied</SelectItem>
+                       <SelectItem value="applied">Applied / Pending Response</SelectItem>
                       <SelectItem value="interviewing">Interviewing</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
+                       <SelectItem value="offered">Offered</SelectItem>
+                       <SelectItem value="archived">Archived</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

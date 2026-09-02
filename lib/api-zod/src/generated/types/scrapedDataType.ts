@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type OpportunityInputType = typeof OpportunityInputType[keyof typeof OpportunityInputType];
+export type ScrapedDataType = typeof ScrapedDataType[keyof typeof ScrapedDataType];
 
 
-export const OpportunityInputType = {
+export const ScrapedDataType = {
   job: 'job',
   grant: 'grant',
   casting: 'casting',

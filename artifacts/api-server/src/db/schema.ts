@@ -5,9 +5,18 @@ export const opportunitiesTable = sqliteTable("opportunities", {
   url: text("url").notNull(),
   title: text("title").notNull(),
   company: text("company"),
-  type: text("type").notNull().default("other"),
+  type: text("type", {
+    enum: [
+      "job",
+      "grant",
+      "casting",
+      "singing-competition",
+      "grant-fellowship",
+      "other",
+    ],
+  }).notNull().default("other"),
   status: text("status", {
-    enum: ["to-apply", "applied", "interviewing", "completed"],
+    enum: ["to-apply", "applied", "interviewing", "offered", "archived"],
   }).notNull().default("to-apply"),
   deadline: text("deadline"),
   summary: text("summary"),

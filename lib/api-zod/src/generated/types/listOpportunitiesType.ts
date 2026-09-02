@@ -12,6 +12,8 @@ export type ListOpportunitiesType = typeof ListOpportunitiesType[keyof typeof Li
 export const ListOpportunitiesType = {
   job: 'job',
   grant: 'grant',
-  hackathon: 'hackathon',
+  casting: 'casting',
+  'singing-competition': 'singing-competition',
+  'grant-fellowship': 'grant-fellowship',
   other: 'other',
 } as const;

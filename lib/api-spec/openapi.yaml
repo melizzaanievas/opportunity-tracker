@@ -167,14 +167,14 @@ paths:
           name: status
           schema:
             type: string
-            enum: [to-apply, applied, interviewing, completed]
+            enum: [to-apply, applied, interviewing, offered, archived]
           required: false
           description: Filter by status
         - in: query
           name: type
           schema:
             type: string
-            enum: [job, grant, hackathon, other]
+            enum: [job, grant, casting, singing-competition, grant-fellowship, other]
           required: false
           description: Filter by type
       responses:
@@ -559,7 +559,7 @@ components:
           type: number
         byStatus:
           type: object
-          required: [to-apply, applied, interviewing, completed]
+          required: [to-apply, applied, interviewing, offered, archived]
           properties:
             to-apply:
               type: number
@@ -567,17 +567,23 @@ components:
               type: number
             interviewing:
               type: number
-            completed:
+            offered:
+              type: number
+            archived:
               type: number
         byType:
           type: object
-          required: [job, grant, hackathon, other]
+          required: [job, grant, casting, singing-competition, grant-fellowship, other]
           properties:
             job:
               type: number
             grant:
               type: number
-            hackathon:
+            casting:
+              type: number
+            singing-competition:
+              type: number
+            grant-fellowship:
               type: number
             other:
               type: number
@@ -597,10 +603,10 @@ components:
           type: ["string", "null"]
         type:
           type: string
-          enum: [job, grant, hackathon, other]
+          enum: [job, grant, casting, singing-competition, grant-fellowship, other]
         status:
           type: string
-          enum: [to-apply, applied, interviewing, completed]
+          enum: [to-apply, applied, interviewing, offered, archived]
         deadline:
           type: ["string", "null"]
           description: ISO date string YYYY-MM-DD
@@ -628,10 +634,10 @@ components:
           type: string
         type:
           type: string
-          enum: [job, grant, hackathon, other]
+          enum: [job, grant, casting, singing-competition, grant-fellowship, other]
         status:
           type: string
-          enum: [to-apply, applied, interviewing, completed]
+          enum: [to-apply, applied, interviewing, offered, archived]
         deadline:
           type: string
         summary:
@@ -651,10 +657,10 @@ components:
           type: string
         type:
           type: string
-          enum: [job, grant, hackathon, other]
+          enum: [job, grant, casting, singing-competition, grant-fellowship, other]
         status:
           type: string
-          enum: [to-apply, applied, interviewing, completed]
+          enum: [to-apply, applied, interviewing, offered, archived]
         deadline:
           type: string
         summary:
@@ -673,7 +679,7 @@ components:
 
     ScrapedData:
       type: object
-      required: [url]
+      required: [url, type]
       properties:
         url:
           type: string
@@ -685,6 +691,9 @@ components:
           type: ["string", "null"]
         keyActionSteps:
           type: ["string", "null"]
+        type:
+          type: string
+          enum: [job, grant, casting, singing-competition, grant-fellowship, other]
         scrapeSuccess:
           type: boolean
 

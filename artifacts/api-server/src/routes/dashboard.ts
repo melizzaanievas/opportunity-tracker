@@ -13,8 +13,21 @@ router.get("/dashboard/stats", requireAuth, async (req, res): Promise<void> => {
 
   const all = await db.select().from(opportunitiesTable);
 
-  const byStatus = { "to-apply": 0, applied: 0, interviewing: 0, completed: 0 };
-  const byType = { job: 0, grant: 0, hackathon: 0, other: 0 };
+  const byStatus = {
+    "to-apply": 0,
+    applied: 0,
+    interviewing: 0,
+    offered: 0,
+    archived: 0,
+  };
+  const byType = {
+    job: 0,
+    grant: 0,
+    casting: 0,
+    "singing-competition": 0,
+    "grant-fellowship": 0,
+    other: 0,
+  };
 
   for (const opp of all) {
     const s = opp.status as keyof typeof byStatus;
@@ -30,7 +43,7 @@ router.get("/dashboard/stats", requireAuth, async (req, res): Promise<void> => {
       and(
         gte(opportunitiesTable.deadline, todayStr),
         lte(opportunitiesTable.deadline, sevenDaysStr),
-        ne(opportunitiesTable.status, "completed")
+        ne(opportunitiesTable.status, "archived")
       )
     )
     .get() as { count: number };

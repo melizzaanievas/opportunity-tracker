@@ -38,15 +38,19 @@ const EVENT_STYLES: Record<
     className: "calendar-event-amber",
   },
   applied: {
-    label: "Applied",
+    label: "Applied / Pending Response",
     className: "calendar-event-blue",
   },
   interviewing: {
     label: "Interviewing",
     className: "calendar-event-emerald",
   },
-  completed: {
-    label: "Completed",
+  offered: {
+    label: "Offered",
+    className: "calendar-event-purple",
+  },
+  archived: {
+    label: "Archived",
     className: "calendar-event-slate",
   },
 };
@@ -81,7 +85,7 @@ export function DashboardCalendar({
     const events = new Map<string, Opportunity[]>();
 
     opportunities
-      .filter((opportunity) => opportunity.status !== "completed")
+      .filter((opportunity) => opportunity.status !== "archived")
       .filter((opportunity) => opportunity.deadline)
       .forEach((opportunity) => {
         const key = opportunity.deadline as string;
@@ -152,7 +156,7 @@ export function DashboardCalendar({
 
         <div className="dashboard-calendar-legend" aria-label="Calendar legend">
           {Object.entries(EVENT_STYLES)
-            .filter(([status]) => status !== "completed")
+            .filter(([status]) => status !== "archived")
             .map(([status, eventStyle]) => (
               <span className="dashboard-calendar-legend-item" key={status}>
                 <span

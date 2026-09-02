@@ -31,6 +31,7 @@ export * from './preferences';
 export * from './preferencesInput';
 export * from './scoutResult';
 export * from './scrapedData';
+export * from './scrapedDataType';
 export * from './scrapeRequest';
 export * from './task';
 export * from './taskInput';

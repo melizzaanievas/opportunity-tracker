@@ -25,13 +25,16 @@ export type DashboardStatsByStatus = {
   'to-apply': number;
   applied: number;
   interviewing: number;
-  completed: number;
+  offered: number;
+  archived: number;
 };
 
 export type DashboardStatsByType = {
   job: number;
   grant: number;
-  hackathon: number;
+  casting: number;
+  'singing-competition': number;
+  'grant-fellowship': number;
   other: number;
 };
 
@@ -48,7 +51,9 @@ export type OpportunityType = typeof OpportunityType[keyof typeof OpportunityTyp
 export const OpportunityType = {
   job: 'job',
   grant: 'grant',
-  hackathon: 'hackathon',
+  casting: 'casting',
+  'singing-competition': 'singing-competition',
+  'grant-fellowship': 'grant-fellowship',
   other: 'other',
 } as const;
 
@@ -59,7 +64,8 @@ export const OpportunityStatus = {
   'to-apply': 'to-apply',
   applied: 'applied',
   interviewing: 'interviewing',
-  completed: 'completed',
+  offered: 'offered',
+  archived: 'archived',
 } as const;
 
 export interface Opportunity {
@@ -90,7 +96,9 @@ export type OpportunityInputType = typeof OpportunityInputType[keyof typeof Oppo
 export const OpportunityInputType = {
   job: 'job',
   grant: 'grant',
-  hackathon: 'hackathon',
+  casting: 'casting',
+  'singing-competition': 'singing-competition',
+  'grant-fellowship': 'grant-fellowship',
   other: 'other',
 } as const;
 
@@ -101,7 +109,8 @@ export const OpportunityInputStatus = {
   'to-apply': 'to-apply',
   applied: 'applied',
   interviewing: 'interviewing',
-  completed: 'completed',
+  offered: 'offered',
+  archived: 'archived',
 } as const;
 
 export interface OpportunityInput {
@@ -122,7 +131,9 @@ export type OpportunityPatchType = typeof OpportunityPatchType[keyof typeof Oppo
 export const OpportunityPatchType = {
   job: 'job',
   grant: 'grant',
-  hackathon: 'hackathon',
+  casting: 'casting',
+  'singing-competition': 'singing-competition',
+  'grant-fellowship': 'grant-fellowship',
   other: 'other',
 } as const;
 
@@ -133,7 +144,8 @@ export const OpportunityPatchStatus = {
   'to-apply': 'to-apply',
   applied: 'applied',
   interviewing: 'interviewing',
-  completed: 'completed',
+  offered: 'offered',
+  archived: 'archived',
 } as const;
 
 export interface OpportunityPatch {
@@ -153,6 +165,18 @@ export interface ScrapeRequest {
   url: string;
 }
 
+export type ScrapedDataType = typeof ScrapedDataType[keyof typeof ScrapedDataType];
+
+
+export const ScrapedDataType = {
+  job: 'job',
+  grant: 'grant',
+  casting: 'casting',
+  'singing-competition': 'singing-competition',
+  'grant-fellowship': 'grant-fellowship',
+  other: 'other',
+} as const;
+
 export interface ScrapedData {
   url: string;
   /** @nullable */
@@ -163,6 +187,7 @@ export interface ScrapedData {
   summary?: string | null;
   /** @nullable */
   keyActionSteps?: string | null;
+  type: ScrapedDataType;
   scrapeSuccess?: boolean;
 }
 
@@ -256,7 +281,8 @@ export const ListOpportunitiesStatus = {
   'to-apply': 'to-apply',
   applied: 'applied',
   interviewing: 'interviewing',
-  completed: 'completed',
+  offered: 'offered',
+  archived: 'archived',
 } as const;
 
 export type ListOpportunitiesType = typeof ListOpportunitiesType[keyof typeof ListOpportunitiesType];
@@ -265,7 +291,9 @@ export type ListOpportunitiesType = typeof ListOpportunitiesType[keyof typeof Li
 export const ListOpportunitiesType = {
   job: 'job',
   grant: 'grant',
-  hackathon: 'hackathon',
+  casting: 'casting',
+  'singing-competition': 'singing-competition',
+  'grant-fellowship': 'grant-fellowship',
   other: 'other',
 } as const;
 

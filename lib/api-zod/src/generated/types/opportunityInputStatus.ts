@@ -13,5 +13,6 @@ export const OpportunityInputStatus = {
   'to-apply': 'to-apply',
   applied: 'applied',
   interviewing: 'interviewing',
-  completed: 'completed',
+  offered: 'offered',
+  archived: 'archived',
 } as const;

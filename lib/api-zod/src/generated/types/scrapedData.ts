@@ -5,6 +5,7 @@
  * Opportunity Tracker API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ScrapedDataType } from './scrapedDataType';
 
 export interface ScrapedData {
   url: string;
@@ -16,5 +17,6 @@ export interface ScrapedData {
   summary?: string | null;
   /** @nullable */
   keyActionSteps?: string | null;
+  type: ScrapedDataType;
   scrapeSuccess?: boolean;
 }

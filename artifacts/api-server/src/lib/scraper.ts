@@ -3,11 +3,20 @@ import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import { logger } from "./logger";
 
+export type OpportunityCategory =
+  | "job"
+  | "grant"
+  | "casting"
+  | "singing-competition"
+  | "grant-fellowship"
+  | "other";
+
 interface ScrapedResult {
   title: string | null;
   deadline: string | null;
   summary: string | null;
   keyActionSteps: string | null;
+  type: OpportunityCategory;
   scrapeSuccess: boolean;
 }
 
@@ -204,6 +213,21 @@ function cleanText(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
+const SINGING_CATEGORY_PATTERN =
+  /\b(?:singing|singer|vocal|vocalist|singing competition)\b/i;
+const CASTING_CATEGORY_PATTERN =
+  /\b(?:audition|casting|role|performer|talent\s+call)\b/i;
+const GRANT_CATEGORY_PATTERN =
+  /\b(?:grant|funding|fellowship|bounty|proposal)\b/i;
+
+export function detectOpportunityCategory(text: string): OpportunityCategory {
+  const normalized = cleanText(text);
+  if (SINGING_CATEGORY_PATTERN.test(normalized)) return "singing-competition";
+  if (CASTING_CATEGORY_PATTERN.test(normalized)) return "casting";
+  if (GRANT_CATEGORY_PATTERN.test(normalized)) return "grant";
+  return "job";
+}
+
 const BOILERPLATE_TITLE_STRINGS = [
   "| Everyone's app platform",
   "Security Check",
@@ -372,6 +396,11 @@ function isGenericTitle(title: string | null, platform: string | null): boolean 
   return false;
 }
 
+function isGenericAirtableTitle(value: string | null | undefined): boolean {
+  const normalized = cleanText(value ?? "");
+  return /^airtable(?:\s*\|\s*everyone['’]s app platform)?$/i.test(normalized);
+}
+
 function selectPageTitle(url: string, candidates: Array<string | null | undefined>): string | null {
   const platform = getPlatformName(url);
   for (const candidate of candidates) {
@@ -411,6 +440,7 @@ export function resolveOpportunityTitle(
   }
 
   if (platform === "Airtable") {
+    if (isGenericAirtableTitle(scrapedTitle)) return "Airtable Form Application";
     if (title && !isGenericTitle(title, platform)) return title;
     return extractAirtablePathTitle(url) ?? buildPlatformFallbackTitle("Airtable", deadline);
   }
@@ -429,7 +459,12 @@ export function parseScrapedHtml(url: string, html: string): ScrapedResult {
   const twitterTitle = $('meta[name="twitter:title"]').attr("content");
   const htmlTitle = $("title").text();
   const h1 = $("h1").first().text();
-  const pageTitle = selectPageTitle(url, [ogTitle, twitterTitle, htmlTitle, h1]);
+  const titleCandidates = [ogTitle, twitterTitle, htmlTitle, h1];
+  const pageTitle = selectPageTitle(url, titleCandidates);
+  const genericAirtableTitle =
+    getPlatformName(url) === "Airtable"
+      ? titleCandidates.find((candidate) => isGenericAirtableTitle(candidate))
+      : null;
 
   // Remove noise before extracting body text so navigation dates and
   // unrelated footer timestamps do not become the opportunity deadline.
@@ -455,7 +490,14 @@ export function parseScrapedHtml(url: string, html: string): ScrapedResult {
     .filter((value): value is string => Boolean(value))
     .join(" ");
   const deadline = extractDate(deadlineMetadata) ?? extractDate(bodyText);
-  const title = resolveOpportunityTitle(url, pageTitle, deadline);
+  const title = resolveOpportunityTitle(
+    url,
+    pageTitle ?? genericAirtableTitle,
+    deadline,
+  );
+  const type = detectOpportunityCategory(
+    [titleCandidates.join(" "), bodyText].join(" "),
+  );
 
   // Key action steps from lists
   const listItems: string[] = [];
@@ -472,6 +514,7 @@ export function parseScrapedHtml(url: string, html: string): ScrapedResult {
     deadline,
     summary,
     keyActionSteps,
+    type,
     scrapeSuccess: !!(title || summary),
   };
 }
@@ -577,7 +620,14 @@ export async function scrapeUrl(url: string): Promise<ScrapedResult> {
 
     if (!res.ok) {
       logger.warn({ status: res.status, url: currentUrl.href }, "Scrape HTTP error");
-      return { title: null, deadline: null, summary: null, keyActionSteps: null, scrapeSuccess: false };
+      return {
+        title: null,
+        deadline: null,
+        summary: null,
+        keyActionSteps: null,
+        type: "job",
+        scrapeSuccess: false,
+      };
     }
 
     const html = await res.text();
@@ -587,6 +637,13 @@ export async function scrapeUrl(url: string): Promise<ScrapedResult> {
       throw err;
     }
     logger.warn({ err, url: currentUrl.href }, "Scraping failed");
-    return { title: null, deadline: null, summary: null, keyActionSteps: null, scrapeSuccess: false };
+    return {
+      title: null,
+      deadline: null,
+      summary: null,
+      keyActionSteps: null,
+      type: "job",
+      scrapeSuccess: false,
+    };
   }
 }
