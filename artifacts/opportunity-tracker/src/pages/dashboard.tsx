@@ -1,23 +1,40 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { differenceInCalendarDays } from "date-fns";
+import { differenceInCalendarDays, format } from "date-fns";
 import {
+  getGetDashboardStatsQueryKey,
+  getListOpportunitiesQueryKey,
   useListOpportunities,
   useGetDashboardStats,
   useTestTelegramAlert,
+  useUpdateOpportunity,
+  type Opportunity,
   ListOpportunitiesStatus,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout";
+import { DashboardCalendar } from "@/components/dashboard-calendar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowUpRight,
   Banknote,
   Briefcase,
+  CalendarDays,
   CheckCircle2,
   Circle,
   Code,
+  Columns3,
   ExternalLink,
   FileQuestion,
+  Grid2X2,
   Loader2,
   Plus,
   Send,
@@ -68,15 +85,48 @@ const FILTERS: { value: ListOpportunitiesStatus | "all"; label: string }[] = [
   { value: "completed", label: "Done"     },
 ];
 
+type DashboardView = "grid" | "kanban" | "calendar";
+
+const VIEW_MODES: {
+  value: DashboardView;
+  label: string;
+  icon: typeof Grid2X2;
+}[] = [
+  { value: "grid", label: "Grid View", icon: Grid2X2 },
+  { value: "kanban", label: "Kanban View", icon: Columns3 },
+  { value: "calendar", label: "Calendar View", icon: CalendarDays },
+];
+
+const KANBAN_COLUMNS: {
+  value: ListOpportunitiesStatus;
+  label: string;
+  accent: string;
+}[] = [
+  { value: "to-apply", label: "To Apply", accent: "kanban-lane-amber" },
+  { value: "applied", label: "Applied", accent: "kanban-lane-blue" },
+  { value: "interviewing", label: "Interviewing", accent: "kanban-lane-emerald" },
+  { value: "completed", label: "Done", accent: "kanban-lane-slate" },
+];
+
+function formatDisplayDate(deadline: string) {
+  const [year, month, day] = deadline.split("-").map(Number);
+  return format(new Date(year, month - 1, day), "MMM d, yyyy");
+}
+
 export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState<ListOpportunitiesStatus | "all">("all");
+  const [viewMode, setViewMode] = useState<DashboardView>("grid");
+  const [selectedOpportunity, setSelectedOpportunity] =
+    useState<Opportunity | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
   const { data: opportunities, isLoading: opsLoading } = useListOpportunities(
     statusFilter === "all" ? undefined : { status: statusFilter }
   );
   const testTelegram = useTestTelegramAlert();
+  const updateOpportunity = useUpdateOpportunity();
 
   const handleTestAlert = () => {
     testTelegram.mutate(undefined, {
@@ -88,6 +138,33 @@ export default function Dashboard() {
   const activeOpportunityCount = stats
     ? Math.max(0, stats.total - stats.byStatus.completed)
     : 0;
+
+  const handleSetDeadline = (opportunityId: number, deadline: string) => {
+    updateOpportunity.mutate(
+      { id: opportunityId, data: { deadline } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({
+            queryKey: getListOpportunitiesQueryKey(),
+          });
+          queryClient.invalidateQueries({
+            queryKey: getGetDashboardStatsQueryKey(),
+          });
+          toast({
+            title: "Deadline added",
+            description: "The opportunity is now on your calendar.",
+          });
+        },
+        onError: () => {
+          toast({
+            title: "Could not save deadline",
+            description: "Please try again.",
+            variant: "destructive",
+          });
+        },
+      },
+    );
+  };
 
   const renderDeadlineBadge = (deadline: string | null | undefined) => {
     if (!deadline) return null;
@@ -135,6 +212,114 @@ export default function Dashboard() {
     );
   };
 
+  const renderOpportunityCard = (opp: Opportunity) => {
+    const Icon = TYPE_ICONS[opp.type] || TYPE_ICONS.other;
+    const statusConf = STATUS_CONFIG[opp.status] ?? STATUS_CONFIG["to-apply"];
+
+    return (
+      <article
+        key={opp.id}
+        className="dashboard-opportunity-card group relative flex min-h-64 flex-col overflow-hidden rounded-2xl"
+        data-testid={`card-opportunity-${opp.id}`}
+      >
+        <Link
+          href={`/opportunity/${opp.id}`}
+          className="absolute inset-0 z-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+          aria-label={`View details for ${opp.title}`}
+          data-testid={`link-opportunity-${opp.id}`}
+        >
+          <span className="sr-only">View opportunity details</span>
+        </Link>
+
+        <div className="relative z-10 flex flex-1 flex-col p-5 pointer-events-none">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="dashboard-type-icon">
+                <Icon className="h-5 w-5" />
+              </div>
+              <span className="dashboard-type-label">{opp.type}</span>
+            </div>
+            <div className="pointer-events-auto">{renderDeadlineBadge(opp.deadline)}</div>
+          </div>
+
+          <Link
+            href={`/opportunity/${opp.id}`}
+            className="dashboard-card-title pointer-events-auto mt-6 line-clamp-2 hover:underline"
+            data-testid={`link-opportunity-title-${opp.id}`}
+          >
+            {opp.title}
+          </Link>
+
+          {opp.summary && (
+            <p className="dashboard-card-copy mt-3 line-clamp-2">{opp.summary}</p>
+          )}
+
+          <div className="mt-auto flex items-end justify-between gap-3 pt-6">
+            <span className={`dashboard-status-badge ${statusConf.badgeClass}`}>
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: statusConf.dot }} />
+              {statusConf.label}
+            </span>
+
+            <div className="flex items-center gap-3">
+              {opp.taskCount !== undefined && opp.taskCount > 0 && (
+                <span className="dashboard-task-count">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  {opp.completedTaskCount || 0}/{opp.taskCount}
+                </span>
+              )}
+              <a
+                href={opp.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="dashboard-external-link pointer-events-auto"
+                aria-label={`Open saved link for ${opp.title}`}
+                title="Open saved link"
+                data-testid={`link-external-opportunity-${opp.id}`}
+              >
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+          </div>
+        </div>
+      </article>
+    );
+  };
+
+  const renderKanbanView = () => (
+    <div className="dashboard-kanban-grid">
+      {KANBAN_COLUMNS.map((column) => {
+        const laneOpportunities = opportunities?.filter(
+          (opportunity) => opportunity.status === column.value,
+        ) ?? [];
+
+        return (
+          <section
+            className={`dashboard-kanban-lane ${column.accent}`}
+            key={column.value}
+            aria-label={`${column.label} opportunities`}
+          >
+            <div className="dashboard-kanban-lane-header">
+              <div>
+                <p className="dashboard-kanban-lane-label">{column.label}</p>
+                <span className="dashboard-kanban-lane-count">
+                  {laneOpportunities.length} {laneOpportunities.length === 1 ? "item" : "items"}
+                </span>
+              </div>
+              <span className="dashboard-kanban-lane-dot" aria-hidden="true" />
+            </div>
+            <div className="dashboard-kanban-lane-content">
+              {laneOpportunities.length > 0 ? (
+                laneOpportunities.map(renderOpportunityCard)
+              ) : (
+                <div className="dashboard-kanban-empty">No opportunities here</div>
+              )}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+
   return (
     <AppLayout>
       <div className="space-y-8 pb-12">
@@ -175,6 +360,34 @@ export default function Dashboard() {
             </button>
           </div>
         </section>
+
+        <div className="flex justify-end">
+          <div
+            className="dashboard-view-toggle"
+            role="tablist"
+            aria-label="Choose dashboard view"
+          >
+            {VIEW_MODES.map(({ value, label, icon: Icon }) => {
+              const active = viewMode === value;
+
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  aria-controls={`dashboard-view-${value}`}
+                  className={`dashboard-view-button ${active ? "is-active" : ""}`}
+                  onClick={() => setViewMode(value)}
+                  data-testid={`button-view-${value}`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {statsLoading ? (
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -222,7 +435,13 @@ export default function Dashboard() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="dashboard-section-kicker">Your pipeline</p>
-              <h2 className="dashboard-section-title">Opportunities in motion</h2>
+              <h2 className="dashboard-section-title">
+                {viewMode === "calendar"
+                  ? "Deadlines in view"
+                  : viewMode === "kanban"
+                    ? "Pipeline by stage"
+                    : "Opportunities in motion"}
+              </h2>
             </div>
             <div className="dashboard-filter-bar" role="tablist" aria-label="Filter opportunities by status">
               {FILTERS.map(({ value, label }) => {
@@ -235,6 +454,7 @@ export default function Dashboard() {
                     aria-selected={active}
                     onClick={() => setStatusFilter(value)}
                     className={`dashboard-filter-button ${active ? "is-active" : ""}`}
+                    data-testid={`button-filter-${value}`}
                   >
                     {label}
                   </button>
@@ -248,6 +468,15 @@ export default function Dashboard() {
               {[1, 2, 3, 4, 5, 6].map((item) => (
                 <div key={item} className="dashboard-opportunity-card h-64 animate-pulse" />
               ))}
+            </div>
+          ) : viewMode === "calendar" ? (
+            <div id="dashboard-view-calendar">
+              <DashboardCalendar
+                opportunities={opportunities ?? []}
+                onOpenOpportunity={setSelectedOpportunity}
+                onSetDeadline={handleSetDeadline}
+                isSavingDeadline={updateOpportunity.isPending}
+              />
             </div>
           ) : opportunities?.length === 0 ? (
             <div className="dashboard-empty-state">
@@ -264,81 +493,90 @@ export default function Dashboard() {
                 Add Opportunity
               </Link>
             </div>
+          ) : viewMode === "kanban" ? (
+            <div id="dashboard-view-kanban">{renderKanbanView()}</div>
           ) : (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {opportunities?.map((opp) => {
-                const Icon = TYPE_ICONS[opp.type] || TYPE_ICONS.other;
-                const statusConf = STATUS_CONFIG[opp.status] ?? STATUS_CONFIG["to-apply"];
-
-                return (
-                  <article key={opp.id} className="dashboard-opportunity-card group relative flex min-h-64 flex-col overflow-hidden rounded-2xl">
-                    <Link
-                      href={`/opportunity/${opp.id}`}
-                      className="absolute inset-0 z-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-                      aria-label={`View details for ${opp.title}`}
-                    >
-                      <span className="sr-only">View opportunity details</span>
-                    </Link>
-
-                    <div className="relative z-10 flex flex-1 flex-col p-5 pointer-events-none">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="dashboard-type-icon">
-                            <Icon className="h-5 w-5" />
-                          </div>
-                          <span className="dashboard-type-label">{opp.type}</span>
-                        </div>
-                        <div className="pointer-events-auto">
-                          {renderDeadlineBadge(opp.deadline)}
-                        </div>
-                      </div>
-
-                      <Link
-                        href={`/opportunity/${opp.id}`}
-                        className="dashboard-card-title pointer-events-auto mt-6 line-clamp-2 hover:underline"
-                      >
-                        {opp.title}
-                      </Link>
-
-                      {opp.summary && (
-                        <p className="dashboard-card-copy mt-3 line-clamp-2">
-                          {opp.summary}
-                        </p>
-                      )}
-
-                      <div className="mt-auto flex items-end justify-between gap-3 pt-6">
-                        <span className={`dashboard-status-badge ${statusConf.badgeClass}`}>
-                          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: statusConf.dot }} />
-                          {statusConf.label}
-                        </span>
-
-                        <div className="flex items-center gap-3">
-                          {opp.taskCount !== undefined && opp.taskCount > 0 && (
-                            <span className="dashboard-task-count">
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                              {opp.completedTaskCount || 0}/{opp.taskCount}
-                            </span>
-                          )}
-                          <a
-                            href={opp.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="dashboard-external-link pointer-events-auto"
-                            aria-label={`Open saved link for ${opp.title}`}
-                            title="Open saved link"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
+            <div id="dashboard-view-grid" className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              {opportunities?.map(renderOpportunityCard)}
             </div>
           )}
         </section>
       </div>
+
+      <Dialog
+        open={!!selectedOpportunity}
+        onOpenChange={(open) => {
+          if (!open) setSelectedOpportunity(null);
+        }}
+      >
+        <DialogContent className="dashboard-opportunity-dialog sm:max-w-[480px]">
+          {selectedOpportunity ? (
+            <>
+              <DialogHeader>
+                <p className="dashboard-section-kicker">
+                  {selectedOpportunity.type}
+                </p>
+                <DialogTitle className="dashboard-dialog-title">
+                  {selectedOpportunity.title}
+                </DialogTitle>
+                <DialogDescription className="dashboard-dialog-description">
+                  {selectedOpportunity.company || "Saved opportunity"}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="dashboard-dialog-body">
+                <div className="dashboard-dialog-meta">
+                  <span className={`dashboard-status-badge ${STATUS_CONFIG[selectedOpportunity.status]?.badgeClass ?? ""}`}>
+                    <span
+                      className="h-2 w-2 rounded-full"
+                      style={{
+                        backgroundColor:
+                          STATUS_CONFIG[selectedOpportunity.status]?.dot ?? "#6366f1",
+                      }}
+                    />
+                    {STATUS_CONFIG[selectedOpportunity.status]?.label ?? selectedOpportunity.status}
+                  </span>
+                  {selectedOpportunity.deadline ? (
+                    <span className="dashboard-dialog-deadline">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      {formatDisplayDate(selectedOpportunity.deadline)}
+                    </span>
+                  ) : null}
+                </div>
+                {selectedOpportunity.summary ? (
+                  <p className="dashboard-dialog-summary">{selectedOpportunity.summary}</p>
+                ) : (
+                  <p className="dashboard-dialog-summary is-muted">
+                    No summary has been added for this opportunity yet.
+                  </p>
+                )}
+              </div>
+
+              <DialogFooter className="dashboard-dialog-footer">
+                <a
+                  href={selectedOpportunity.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="dashboard-secondary-button"
+                  data-testid={`link-dialog-external-${selectedOpportunity.id}`}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  View Posting
+                </a>
+                <Link
+                  href={`/opportunity/${selectedOpportunity.id}`}
+                  className="dashboard-add-button"
+                  onClick={() => setSelectedOpportunity(null)}
+                  data-testid={`link-dialog-details-${selectedOpportunity.id}`}
+                >
+                  Open Details
+                  <ArrowUpRight className="h-4 w-4" />
+                </Link>
+              </DialogFooter>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
