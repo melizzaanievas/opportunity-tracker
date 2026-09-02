@@ -122,36 +122,7 @@ async function runAuthenticatedDailySummary(_req: Request, res: Response): Promi
   });
 }
 
-export async function runPublicDailySummary(_req: Request, res: Response): Promise<void> {
-  try {
-    const { text } = await buildDailySummary();
-    const sent = await sendTelegramMessage(text);
-
-    if (!sent) {
-      res.status(502).json({
-        success: false,
-        message: "Failed to send daily summary to Telegram",
-      });
-      return;
-    }
-
-    res.setHeader("Content-Type", "application/json");
-    res.status(200).json({
-      success: true,
-      message: "Daily summary sent",
-    });
-  } catch (err) {
-    logger.error({ err }, "Public daily summary failed");
-    res.status(500).json({
-      success: false,
-      message: "Failed to generate daily summary",
-    });
-  }
-}
-
-// The public GET endpoint is mounted at the app level in app.ts so it is
-// registered before the complete API router. The POST variant remains
-// protected for dashboard/manual use.
+// The daily summary trigger is protected for dashboard/manual use.
 router.post("/cron-daily-summary", requireAuth, runAuthenticatedDailySummary);
 
 export default router;

@@ -55,7 +55,7 @@ A private, password-protected full-stack web dashboard for tracking jobs, grants
 - Session auth (express-session) over JWT — simpler for a single-user private app; password is compared directly to APP_PASSWORD env var
 - Scraper uses cheerio + built-in fetch with a 15s timeout; gracefully falls back to manual entry on failure
 - Google OAuth tokens stored in the SQLite `settings` table — persisted across server restarts
-- Cron job runs inside the Express process at 8 AM; the `/api/cron-daily-summary` endpoint allows external triggering (protected by auth session)
+- Cron job runs inside the Express process at 8 AM; the `/api/cron-daily-summary` POST endpoint allows authenticated dashboard/manual triggering
 
 ## User Preferences
 

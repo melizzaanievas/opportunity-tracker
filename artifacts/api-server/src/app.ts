@@ -4,7 +4,6 @@ import pinoHttp from "pino-http";
 import session from "express-session";
 import router from "./routes";
 import { logger } from "./lib/logger";
-import { runPublicDailySummary } from "./routes/integrations";
 
 const app: Express = express();
 
@@ -55,11 +54,6 @@ app.use(
     },
   }),
 );
-
-// Keep the cron endpoint at the Express app level and before all other API
-// routing so external cron services never reach a frontend catch-all.
-app.get("/cron-daily-summary", runPublicDailySummary);
-app.get("/api/cron-daily-summary", runPublicDailySummary);
 
 app.use("/api", router);
 

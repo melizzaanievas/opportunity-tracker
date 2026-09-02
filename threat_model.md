@@ -23,7 +23,7 @@ Opportunity Tracker is a single-user, password-protected React/Vite dashboard ba
 
 - **Production entry points:** `artifacts/api-server/src/app.ts`, `artifacts/api-server/src/index.ts`, route files under `artifacts/api-server/src/routes/`, and the React app under `artifacts/opportunity-tracker/src/`.
 - **Highest-risk areas:** `middlewares/auth.ts`, `routes/auth.ts`, opportunity/task mutation routes, `routes/integrations.ts`, `routes/telegram-webhook.ts`, `lib/scraper.ts`, `lib/calendar.ts`, session/CORS setup in `app.ts`.
-- **Public surfaces:** `/api/healthz`, `/api/auth/login`, `/api/auth/me`, app-level GET `/cron-daily-summary` and `/api/cron-daily-summary`, and `/api/telegram-webhook`. Opportunity, task, dashboard, calendar-initiation, Telegram-test, and POST cron routes require the session flag.
+- **Public surfaces:** `/api/healthz`, `/api/auth/login`, `/api/auth/me`, and `/api/telegram-webhook`. Opportunity, task, dashboard, calendar-initiation, Telegram-test, and POST cron routes require the session flag.
 - **Dev-only areas:** Vite development plugins and `artifacts/mockup-sandbox`; do not treat them as production surfaces without a demonstrated production path.
 
 ## Threat Categories

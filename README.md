@@ -67,15 +67,7 @@ The API server runs on port `8080` and the frontend runs on port `22507` in the 
 
 ### Configure the daily summary
 
-The API server includes a built-in daily summary schedule for 8:00 AM. You can also use [cron-job.org](https://cron-job.org/) to call the public summary endpoint at a time that suits your schedule.
-
-Create a daily cron job for:
-
-```text
-https://YOUR-APP-DOMAIN/cron-daily-summary
-```
-
-Set the cron job to run at 9:00 AM if you want external daily 9:00 AM pings. Replace `YOUR-APP-DOMAIN` with the public URL for your deployment.
+The API server includes a built-in daily summary schedule for 8:00 AM. The dashboard can also trigger a summary manually after signing in.
 
 ## Telegram Setup
 
