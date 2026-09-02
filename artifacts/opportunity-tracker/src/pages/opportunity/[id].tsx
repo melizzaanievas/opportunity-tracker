@@ -215,7 +215,6 @@ export default function OpportunityDetail() {
   };
 
   const sans = "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif";
-  const serif = "'Cormorant Garamond', Georgia, serif";
 
   const glassCard: React.CSSProperties = {
     background: "rgba(255,255,255,0.08)",
@@ -359,9 +358,9 @@ export default function OpportunityDetail() {
               )}
             </div>
 
-            {/* Title — serif */}
+            {/* Title — sans-serif */}
             <h1 style={{
-              fontFamily: serif, fontSize: "2.4rem", fontWeight: 700,
+              fontFamily: sans, fontSize: "2.4rem", fontWeight: 700,
               letterSpacing: "0.03em", color: "#F8F5FF",
               textShadow: "0 0 24px rgba(220,200,255,0.25)",
               marginBottom: "16px", lineHeight: 1.2,
@@ -572,7 +571,7 @@ export default function OpportunityDetail() {
         <DialogContent className="ethereal-dialog sm:max-w-[500px]">
           <form onSubmit={handleEditSubmit}>
             <DialogHeader>
-              <DialogTitle className="ethereal-dialog-title font-serif text-2xl">Edit Opportunity</DialogTitle>
+              <DialogTitle className="ethereal-dialog-title font-sans text-2xl">Edit Opportunity</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">

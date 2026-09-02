@@ -435,7 +435,7 @@ export default function Dashboard() {
 
           <Link
             href={`/opportunity/${opp.id}`}
-            className="dashboard-card-title pointer-events-auto line-clamp-2 text-lg font-semibold text-slate-100 hover:underline"
+            className="dashboard-card-title pointer-events-auto line-clamp-2 text-base font-semibold text-slate-100 hover:underline"
             data-testid={`link-opportunity-title-${opp.id}`}
           >
             {opp.title}
@@ -578,7 +578,7 @@ export default function Dashboard() {
     >
       <div className="space-y-8 pb-12">
         <section
-          className="dashboard-date-quote-banner mb-6 rounded-2xl border border-slate-800/80 bg-slate-900/60 p-6 backdrop-blur-xl"
+          className="dashboard-date-quote-banner mb-4 flex items-center justify-between rounded-xl border border-slate-800/60 bg-slate-900/40 p-4"
           aria-labelledby="dashboard-welcome-title"
           data-testid="dashboard-date-quote-banner"
         >
@@ -589,7 +589,7 @@ export default function Dashboard() {
                 <div className="min-w-0">
                   <h2
                     id="dashboard-welcome-title"
-                    className="dashboard-hero-greeting font-sans text-2xl font-bold text-white"
+                    className="dashboard-hero-greeting text-xl font-semibold tracking-tight text-white"
                   >
                     {getDashboardGreeting(currentDate)}
                   </h2>
@@ -610,9 +610,9 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-            <div className="dashboard-quote-block rounded-xl border border-slate-700/50 bg-slate-800/40 p-4 text-xs">
-              <p className="dashboard-quote-label">TODAY&apos;S MOTIVATION</p>
-              <blockquote className="dashboard-quote-text text-slate-300 italic">
+            <div className="dashboard-quote-block">
+              <p className="dashboard-quote-label">Today&apos;s motivation</p>
+              <blockquote className="dashboard-quote-text text-sm font-medium text-slate-300 italic">
                 “{quote.text}”
               </blockquote>
               <cite className="dashboard-quote-author text-indigo-400 font-medium">
@@ -623,18 +623,46 @@ export default function Dashboard() {
         </section>
 
         <div className="dashboard-main-view" key={viewMode}>
+          <div className="dashboard-toolbar my-4">
+            <div
+              className="dashboard-stage-filters"
+              role="tablist"
+              aria-label="Filter opportunities by status"
+            >
+              {FILTERS.map(({ value, label }) => {
+                const active = statusFilter === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => handleStatusFilter(value)}
+                    className={`dashboard-filter-button ${active ? "is-active" : ""}`}
+                    data-testid={`button-filter-${value}`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            {renderViewSwitcher()}
+          </div>
+
           {viewMode === "analytics" && (
             <>
-              <div className="dashboard-pipeline-heading dashboard-analytics-heading">
+              <div className="dashboard-analytics-heading">
                 <div>
-                  <h2 id="pipeline-analytics-title" className="dashboard-pipeline-title">
+                  <h2
+                    id="pipeline-analytics-title"
+                    className="dashboard-pipeline-title text-xl font-semibold tracking-tight text-white"
+                  >
                     Pipeline Analytics
                   </h2>
-                  <p className="dashboard-pipeline-subtitle">
+                  <p className="dashboard-pipeline-subtitle text-xs font-normal text-slate-400">
                     Category breakdown across stage pipelines.
                   </p>
                 </div>
-                {renderViewSwitcher()}
               </div>
               <section
                 id="dashboard-view-analytics"
@@ -794,13 +822,13 @@ export default function Dashboard() {
           {viewMode !== "analytics" && (
             <>
         {statsLoading ? (
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 my-4 md:grid-cols-4">
             {[1, 2, 3, 4].map((item) => (
-              <div key={item} className="dashboard-stat-card h-28 animate-pulse" />
+              <div key={item} className="dashboard-stat-card h-[60px] animate-pulse" />
             ))}
           </div>
         ) : stats ? (
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 my-4 md:grid-cols-4">
             <button
               type="button"
               className={`dashboard-stat-card cursor-pointer transition-all hover:border-indigo-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
@@ -812,9 +840,8 @@ export default function Dashboard() {
               aria-pressed={summaryFilter === "total"}
               data-testid="button-summary-total"
             >
-              <span className="dashboard-stat-label">Total tracked</span>
-              <strong className="dashboard-stat-value">{stats.total}</strong>
-              <span className="dashboard-stat-note">Across every stage</span>
+              <span className="dashboard-stat-label text-sm font-medium text-slate-300">Total Tracked</span>
+              <strong className="dashboard-stat-value text-base font-semibold text-slate-100">{stats.total}</strong>
             </button>
             <button
               type="button"
@@ -829,9 +856,8 @@ export default function Dashboard() {
               aria-pressed={summaryFilter === "closing-soon"}
               data-testid="button-summary-closing-soon"
             >
-              <span className="dashboard-stat-label">Closing soon</span>
-              <strong className="dashboard-stat-value">{stats.closingSoon}</strong>
-              <span className="dashboard-stat-note">Needs attention this week</span>
+              <span className="dashboard-stat-label text-sm font-medium text-slate-300">Closing Soon</span>
+              <strong className="dashboard-stat-value text-base font-semibold text-slate-100">{stats.closingSoon}</strong>
             </button>
             <button
               type="button"
@@ -844,9 +870,8 @@ export default function Dashboard() {
               aria-pressed={summaryFilter === "to-apply"}
               data-testid="button-summary-to-apply"
             >
-              <span className="dashboard-stat-label">To apply</span>
-              <strong className="dashboard-stat-value">{stats.byStatus["to-apply"]}</strong>
-              <span className="dashboard-stat-note">Ready for your next move</span>
+              <span className="dashboard-stat-label text-sm font-medium text-slate-300">To Apply</span>
+              <strong className="dashboard-stat-value text-base font-semibold text-slate-100">{stats.byStatus["to-apply"]}</strong>
             </button>
             <button
               type="button"
@@ -859,46 +884,13 @@ export default function Dashboard() {
               aria-pressed={summaryFilter === "interviewing"}
               data-testid="button-summary-interviewing"
             >
-              <span className="dashboard-stat-label">Interviewing</span>
-              <strong className="dashboard-stat-value">{stats.byStatus.interviewing}</strong>
-              <span className="dashboard-stat-note">Keep the momentum going</span>
+              <span className="dashboard-stat-label text-sm font-medium text-slate-300">Interviewing</span>
+              <strong className="dashboard-stat-value text-base font-semibold text-slate-100">{stats.byStatus.interviewing}</strong>
             </button>
           </div>
         ) : null}
 
-        <section className="space-y-5">
-          <div className="dashboard-pipeline-heading">
-            <div className="dashboard-pipeline-top-row">
-              <div>
-                <h2 className="dashboard-pipeline-title">Your Pipeline</h2>
-                <p className="dashboard-pipeline-subtitle">Active opportunities in motion</p>
-              </div>
-              {renderViewSwitcher()}
-            </div>
-            <div
-              className="dashboard-filter-bar dashboard-pipeline-filter-bar mt-4"
-              role="tablist"
-              aria-label="Filter opportunities by status"
-            >
-              {FILTERS.map(({ value, label }) => {
-                const active = statusFilter === value;
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => handleStatusFilter(value)}
-                    className={`dashboard-filter-button ${active ? "is-active" : ""}`}
-                    data-testid={`button-filter-${value}`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
+        <section className="space-y-4">
           {opsLoading ? (
             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {[1, 2, 3, 4, 5, 6].map((item) => (

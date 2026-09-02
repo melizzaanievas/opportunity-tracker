@@ -103,7 +103,7 @@ export default function AddOpportunity() {
         </Button>
 
         <div className="mb-8">
-          <h1 className="new-opportunity-title text-4xl font-serif font-bold tracking-tight mb-2">New Opportunity</h1>
+          <h1 className="new-opportunity-title text-4xl font-sans font-bold tracking-tight mb-2">New Opportunity</h1>
           <p className="new-opportunity-description">Add a job, grant, casting opportunity, or competition you want to track.</p>
         </div>
 
