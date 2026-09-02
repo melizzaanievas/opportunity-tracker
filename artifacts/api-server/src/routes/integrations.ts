@@ -154,4 +154,71 @@ export async function runPublicDailySummary(_req: Request, res: Response): Promi
 // protected for dashboard/manual use.
 router.post("/cron-daily-summary", requireAuth, runAuthenticatedDailySummary);
 
+// Webhook endpoint to catch incoming Telegram messages
+router.post("/telegram-webhook", async (req, res) => {
+  try {
+    const { message } = req.body;
+
+    // Ignore empty messages
+    if (!message || !message.text) {
+      return res.status(200).send("OK");
+    }
+
+    const chatId = message.chat.id;
+    const incomingText = message.text.trim();
+
+    // Verify message comes from your allowed Telegram Chat ID
+    if (String(chatId) !== String(process.env.TELEGRAM_CHAT_ID)) {
+      return res.status(200).send("OK");
+    }
+
+    // Determine if message is a URL or text
+    let title = "Quick Capture";
+    let url = "";
+
+    if (incomingText.startsWith("http://") || incomingText.startsWith("https://")) {
+      url = incomingText;
+      try {
+        title = `Opportunity from ${new URL(incomingText).hostname}`;
+      } catch {
+        title = "Shared Link";
+      }
+    } else {
+      title = incomingText.slice(0, 60);
+    }
+
+    // Save to PostgreSQL / Supabase
+    // (If using a raw SQL pool or ORM, adapt this insert statement)
+    if (process.env.DATABASE_URL) {
+      const { Pool } = await import("pg");
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      
+      await pool.query(
+        `INSERT INTO opportunities (title, organization, url, status) 
+         VALUES ($1, $2, $3, $4)`,
+        [title, "Telegram Capture", url, "To Apply"]
+      );
+      await pool.end();
+    }
+
+    // Send confirmation message back to your Telegram chat
+    const telegramApiUrl = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`;
+    await fetch(telegramApiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: `✅ Saved to Opportunity Tracker!\n\n📌 Title: ${title}\n🔗 Link: ${url || "N/A"}`
+      })
+    });
+
+    return res.status(200).send("OK");
+  } catch (error) {
+    console.error("Telegram webhook processing error:", error);
+    // Return 200 so Telegram does not endlessly retry failed delivery
+    return res.status(200).send("OK");
+  }
+});
+
+
 export default router;
