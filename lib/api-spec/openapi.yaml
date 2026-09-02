@@ -46,6 +46,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
+  /integrations/telegram-webhook/register:
+    post:
+      operationId: registerTelegramWebhook
+      tags: [integrations]
+      summary: Re-register the configured Telegram webhook
+      responses:
+        "200":
+          description: Telegram webhook registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+        "502":
+          description: Telegram rejected the webhook registration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Telegram webhook registration is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   # Auth
   /auth/login:
     post:

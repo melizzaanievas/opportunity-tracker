@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
 import { afterEach, describe, it } from "node:test";
 import express from "express";
+import session from "express-session";
+import pinoHttp from "pino-http";
 import healthRouter from "../src/routes/health.ts";
 import {
   checkTelegramWebhook,
@@ -9,6 +11,7 @@ import {
   registerTelegramWebhook,
 } from "../src/lib/register-webhook.ts";
 import { getTelegramWebhookSecret } from "../src/lib/telegram.ts";
+import { logger } from "../src/lib/logger.ts";
 
 const TELEGRAM_BOT_TOKEN = "register-webhook-test-token";
 const TELEGRAM_WEBHOOK_SECRET = "register-webhook-test-secret";
@@ -66,7 +69,162 @@ async function fetchHealth(query = ""): Promise<Record<string, unknown>> {
   }
 }
 
+async function fetchWebhookRecovery(
+  authenticated = true,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const app = express();
+  app.use(pinoHttp({ logger }));
+  app.use(
+    session({
+      secret: "webhook-recovery-test-session",
+      resave: false,
+      saveUninitialized: false,
+    }),
+  );
+  app.use((req, _res, next) => {
+    if (authenticated) {
+      req.session.authenticated = true;
+    }
+    next();
+  });
+  app.use(healthRouter);
+
+  const server: Server = createServer(app);
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => resolve());
+  });
+
+  const address = server.address();
+  if (!address || typeof address === "string") {
+    server.close();
+    throw new Error("Webhook recovery test server did not expose an address");
+  }
+
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:${address.port}/integrations/telegram-webhook/register`,
+      { method: "POST" },
+    );
+    return {
+      status: response.status,
+      body: (await response.json()) as Record<string, unknown>,
+    };
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((err) => (err ? reject(err) : resolve()));
+    });
+  }
+}
+
 describe("Telegram webhook registration", () => {
+  it("requires authentication for dashboard webhook recovery", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input, init) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      if (url.startsWith("http://127.0.0.1:")) {
+        return originalFetch(input, init);
+      }
+      throw new Error("Telegram must not be contacted by unauthenticated callers");
+    }) as typeof fetch;
+
+    try {
+      const response = await fetchWebhookRecovery(false);
+      assert.equal(response.status, 401);
+      assert.deepEqual(response.body, { error: "Unauthorized" });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("re-registers the configured webhook through the authenticated recovery route", async () => {
+    process.env.REPLIT_DOMAINS = "example.replit.app";
+    delete process.env.REPLIT_DEV_DOMAIN;
+    process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
+    process.env.TELEGRAM_WEBHOOK_SECRET = TELEGRAM_WEBHOOK_SECRET;
+
+    let requestBody: Record<string, unknown> | undefined;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input, init) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      if (url.startsWith("http://127.0.0.1:")) {
+        return originalFetch(input, init);
+      }
+      assert.equal(url, TELEGRAM_API_URL);
+      requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof fetch;
+
+    try {
+      const response = await fetchWebhookRecovery();
+      assert.equal(response.status, 200);
+      assert.equal(
+        (response.body.telegramWebhook as Record<string, unknown>).status,
+        "successful",
+      );
+      assert.equal(requestBody?.url, EXPECTED_WEBHOOK_URL);
+      assert.equal(requestBody?.secret_token, TELEGRAM_WEBHOOK_SECRET);
+      assert.doesNotMatch(JSON.stringify(response.body), new RegExp(TELEGRAM_WEBHOOK_SECRET));
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("returns a safe failure and preserves failed readiness after recovery is rejected", async () => {
+    process.env.REPLIT_DOMAINS = "example.replit.app";
+    delete process.env.REPLIT_DEV_DOMAIN;
+    process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
+    process.env.TELEGRAM_WEBHOOK_SECRET = TELEGRAM_WEBHOOK_SECRET;
+
+    const rejectionDescription = `Webhook rejected ${TELEGRAM_BOT_TOKEN} using ${TELEGRAM_WEBHOOK_SECRET}`;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input, init) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      if (url.startsWith("http://127.0.0.1:")) {
+        return originalFetch(input, init);
+      }
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          description: rejectionDescription,
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }) as typeof fetch;
+
+    try {
+      const response = await fetchWebhookRecovery();
+      assert.equal(response.status, 502);
+      assert.match(String(response.body.error), /Telegram webhook registration failed/);
+      assert.doesNotMatch(JSON.stringify(response.body), new RegExp(TELEGRAM_BOT_TOKEN));
+      assert.doesNotMatch(JSON.stringify(response.body), new RegExp(TELEGRAM_WEBHOOK_SECRET));
+      assert.equal(getTelegramWebhookReadiness().status, "failed");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it("registers the configured webhook URL with its secret token", async () => {
     process.env.REPLIT_DOMAINS = "example.replit.app";
     delete process.env.REPLIT_DEV_DOMAIN;

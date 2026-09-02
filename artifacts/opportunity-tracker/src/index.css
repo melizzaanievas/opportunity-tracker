@@ -821,6 +821,34 @@ main, .app-container, #root, #app {
   box-shadow: none !important;
 }
 
+.dashboard-webhook-alert-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+}
+
+.dashboard-webhook-alert-actions .dashboard-webhook-alert-refresh {
+  margin-top: 0;
+}
+
+.dashboard-webhook-alert-restore {
+  border-color: rgba(251, 146, 60, 0.5) !important;
+  background: rgba(124, 45, 18, 0.35) !important;
+  color: #fed7aa !important;
+}
+
+.dashboard-webhook-alert-restore:hover:not(:disabled) {
+  border-color: rgba(253, 186, 116, 0.76) !important;
+  background: rgba(154, 52, 18, 0.46) !important;
+}
+
+.dashboard-webhook-alert-recovery-message {
+  margin-top: 0.45rem;
+  color: #fed7aa !important;
+  font-size: 0.7rem;
+}
+
 .dashboard-webhook-alert-refresh:hover:not(:disabled) {
   border-color: rgba(203, 213, 225, 0.64) !important;
   background: rgba(71, 85, 105, 0.5) !important;

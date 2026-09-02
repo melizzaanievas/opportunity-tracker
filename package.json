@@ -14,7 +14,7 @@
   "private": true,
   "pnpm": {
     "overrides": {
-      "fast-uri": "3.1.5",
+      "fast-uri": "3.1.6",
       "qs": "6.16.0",
       "brace-expansion@>=4.0.0 <5.0.9": "5.0.9",
       "js-yaml@>=4.0.0 <4.3.1": "4.3.1",

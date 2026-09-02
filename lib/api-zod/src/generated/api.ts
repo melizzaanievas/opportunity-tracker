@@ -30,6 +30,23 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary Re-register the configured Telegram webhook
+ */
+export const RegisterTelegramWebhookResponse = zod.object({
+  "status": zod.string(),
+  "telegramWebhook": zod.object({
+  "status": zod.enum(['pending', 'successful', 'failed']),
+  "webhookUrl": zod.string().nullable(),
+  "description": zod.string().nullable(),
+  "liveStatus": zod.enum(['unknown', 'matching', 'out_of_band', 'stale', 'unavailable']).optional(),
+  "liveWebhookUrl": zod.string().nullish(),
+  "liveDescription": zod.string().nullish(),
+  "secretTokenConfigured": zod.boolean().optional()
+})
+})
+
+
+/**
  * @summary Log in with the app password
  */
 export const LoginBody = zod.object({
@@ -417,4 +434,3 @@ export const CronDailySummaryResponse = zod.object({
   "message": zod.string().nullish(),
   "sent": zod.number().optional()
 })
-// End of generated output.

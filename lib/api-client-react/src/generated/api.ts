@@ -155,6 +155,77 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
 
 
+export const getRegisterTelegramWebhookUrl = () => {
+
+
+
+
+  return `/api/integrations/telegram-webhook/register`
+}
+
+/**
+ * @summary Re-register the configured Telegram webhook
+ */
+export const registerTelegramWebhook = async ( options?: Parameters<typeof customFetch>[1]): Promise<HealthStatus> => {
+
+  return customFetch<HealthStatus>(getRegisterTelegramWebhookUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRegisterTelegramWebhookMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerTelegramWebhook>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof registerTelegramWebhook>>, TError,void, TContext> => {
+
+const mutationKey = ['registerTelegramWebhook'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof registerTelegramWebhook>>, void> = () => {
+
+
+          return  registerTelegramWebhook(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegisterTelegramWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof registerTelegramWebhook>>>
+
+    export type RegisterTelegramWebhookMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Re-register the configured Telegram webhook
+ */
+export const useRegisterTelegramWebhook = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerTelegramWebhook>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof registerTelegramWebhook>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getRegisterTelegramWebhookMutationOptions(options));
+    }
+
 export const getLoginUrl = () => {
 
 
