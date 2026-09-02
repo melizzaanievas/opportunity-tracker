@@ -18,7 +18,7 @@ const TELEGRAM_WEBHOOK_SECRET = "register-webhook-test-secret";
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook`;
 const TELEGRAM_WEBHOOK_INFO_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo`;
 const EXPECTED_WEBHOOK_URL =
-  "https://example.replit.app/api/integrations/telegram-webhook";
+  "https://example.replit.app/api/telegram/webhook";
 
 const environmentKeys = [
   "REPLIT_DOMAINS",
@@ -260,13 +260,13 @@ describe("Telegram webhook registration", () => {
     assert.equal(calls.length, 1);
     assert.equal(
       calls[0]?.body.url,
-      "https://example.replit.app/api/integrations/telegram-webhook",
+      EXPECTED_WEBHOOK_URL,
     );
     assert.equal(calls[0]?.body.secret_token, TELEGRAM_WEBHOOK_SECRET);
     assert.deepEqual(getTelegramWebhookReadiness(), {
       status: "successful",
       webhookUrl:
-        "https://example.replit.app/api/integrations/telegram-webhook",
+        EXPECTED_WEBHOOK_URL,
       description: null,
     });
   });
@@ -289,7 +289,7 @@ describe("Telegram webhook registration", () => {
       assert.deepEqual(getTelegramWebhookReadiness(), {
         status: "pending",
         webhookUrl:
-          "https://example.replit.app/api/integrations/telegram-webhook",
+          EXPECTED_WEBHOOK_URL,
         description: null,
       });
 
@@ -549,7 +549,7 @@ describe("Telegram webhook registration", () => {
     assert.deepEqual(getTelegramWebhookReadiness(), {
       status: "pending",
       webhookUrl:
-        "https://example.replit.app/api/integrations/telegram-webhook",
+        EXPECTED_WEBHOOK_URL,
       description: null,
     });
   });
@@ -615,7 +615,7 @@ describe("Telegram webhook registration", () => {
         assert(error instanceof Error);
         assert.match(
           error.message,
-          /https:\/\/example\.replit\.app\/api\/integrations\/telegram-webhook/,
+          /https:\/\/example\.replit\.app\/api\/telegram\/webhook/,
         );
         assert.match(
           error.message,
@@ -633,7 +633,7 @@ describe("Telegram webhook registration", () => {
     assert.deepEqual(getTelegramWebhookReadiness(), {
       status: "failed",
       webhookUrl:
-        "https://example.replit.app/api/integrations/telegram-webhook",
+        EXPECTED_WEBHOOK_URL,
       description: "Webhook URL rejected for [REDACTED] using [REDACTED]",
     });
 
@@ -641,7 +641,7 @@ describe("Telegram webhook registration", () => {
     assert.deepEqual(health.telegramWebhook, {
       status: "failed",
       webhookUrl:
-        "https://example.replit.app/api/integrations/telegram-webhook",
+        EXPECTED_WEBHOOK_URL,
       description: "Webhook URL rejected for [REDACTED] using [REDACTED]",
     });
     assert.doesNotMatch(JSON.stringify(health), new RegExp(TELEGRAM_BOT_TOKEN));
@@ -671,7 +671,7 @@ describe("Telegram webhook registration", () => {
         assert(error instanceof Error);
         assert.match(
           error.message,
-          /https:\/\/example\.replit\.app\/api\/integrations\/telegram-webhook/,
+          /https:\/\/example\.replit\.app\/api\/telegram\/webhook/,
         );
         assert.match(
           error.message,
@@ -743,6 +743,7 @@ describe("Telegram webhook registration", () => {
   });
 
   it("reports an out-of-band live webhook without exposing credentials", async () => {
+    process.env.NODE_ENV = "production";
     process.env.REPLIT_DOMAINS = "example.replit.app";
     delete process.env.REPLIT_DEV_DOMAIN;
     process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
@@ -799,6 +800,7 @@ describe("Telegram webhook registration", () => {
   });
 
   it("reports a stale live webhook when Telegram has no active URL", async () => {
+    process.env.NODE_ENV = "production";
     process.env.REPLIT_DOMAINS = "example.replit.app";
     delete process.env.REPLIT_DEV_DOMAIN;
     process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
@@ -863,6 +865,7 @@ describe("Telegram webhook registration", () => {
   });
 
   it("reports a safe unavailable state when live inspection fails", async () => {
+    process.env.NODE_ENV = "production";
     process.env.REPLIT_DOMAINS = "example.replit.app";
     delete process.env.REPLIT_DEV_DOMAIN;
     process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
@@ -895,5 +898,44 @@ describe("Telegram webhook registration", () => {
       JSON.stringify(readiness),
       new RegExp(TELEGRAM_WEBHOOK_SECRET),
     );
+  });
+
+  it("treats development URL drift as advisory when Telegram is configured", async () => {
+    process.env.NODE_ENV = "development";
+    delete process.env.REPLIT_DOMAINS;
+    process.env.REPLIT_DEV_DOMAIN = "current.replit.dev";
+    process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
+    process.env.TELEGRAM_WEBHOOK_SECRET = TELEGRAM_WEBHOOK_SECRET;
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(
+        JSON.stringify({
+          ok: true,
+          result: {
+            url: "https://previous.replit.dev/api/telegram/webhook",
+            allowed_updates: ["message"],
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      )) as typeof fetch;
+
+    try {
+      await checkTelegramWebhook();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    const readiness = getTelegramWebhookReadiness();
+    assert.equal(readiness.liveStatus, "matching");
+    assert.equal(
+      readiness.liveWebhookUrl,
+      "https://previous.replit.dev/api/telegram/webhook",
+    );
+    assert.equal(
+      readiness.liveDescription,
+      "Development/staging webhook URL drift is advisory",
+    );
+    assert.equal(readiness.secretTokenConfigured, true);
   });
 });

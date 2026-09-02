@@ -335,6 +335,7 @@ export function createTelegramWebhookRouter(
   }
 
   router.post("/telegram-webhook", handleTelegramUpdate);
+  router.post("/telegram/webhook", handleTelegramUpdate);
   router.post("/integrations/telegram-webhook", handleTelegramUpdate);
   return router;
 }

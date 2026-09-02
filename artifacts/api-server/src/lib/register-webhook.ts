@@ -2,20 +2,37 @@ import { logger } from "./logger";
 import { getTelegramWebhookSecret } from "./telegram";
 
 /** Returns the best public base URL for this Replit app. */
-function getPublicBaseUrl(): string | null {
+function getPublicBaseUrl(requestHost?: string): string | null {
+  const host = requestHost?.trim();
+  if (
+    host &&
+    !/^(localhost|127(?:\.\d{1,3}){3}|0\.0\.0\.0|\[?::1\]?)(?::\d+)?$/i.test(
+      host,
+    )
+  ) {
+    return `https://${host}`;
+  }
+
+  // Replit's dev domain is the current public host for development and
+  // staging. Prefer it over a stale custom-domain value in those environments.
+  if (process.env.NODE_ENV !== "production") {
+    const dev = process.env.REPLIT_DEV_DOMAIN?.trim();
+    if (dev) {
+      return `https://${dev}`;
+    }
+  }
+
   const domains = process.env.REPLIT_DOMAINS;
   if (domains) {
     const first = domains.split(",")[0].trim();
-    return `https://${first}`;
+    if (first) return `https://${first}`;
   }
-  const dev = process.env.REPLIT_DEV_DOMAIN;
-  if (dev) {
-    return `https://${dev}`;
-  }
-  return null;
+
+  const dev = process.env.REPLIT_DEV_DOMAIN?.trim();
+  return dev ? `https://${dev}` : null;
 }
 
-const TELEGRAM_WEBHOOK_PATH = "/api/integrations/telegram-webhook";
+export const TELEGRAM_WEBHOOK_PATH = "/api/telegram/webhook";
 const TELEGRAM_WEBHOOK_MAX_ATTEMPTS = 3;
 const TELEGRAM_WEBHOOK_RETRY_DELAY_MS = 250;
 const TELEGRAM_WEBHOOK_MAX_RETRY_DELAY_MS = 5_000;
@@ -42,8 +59,8 @@ let webhookReadiness: TelegramWebhookReadiness = {
   description: null,
 };
 
-function getConfiguredWebhookUrl(): string | null {
-  const base = getPublicBaseUrl();
+function getConfiguredWebhookUrl(requestHost?: string): string | null {
+  const base = getPublicBaseUrl(requestHost);
   return base ? `${base}${TELEGRAM_WEBHOOK_PATH}` : null;
 }
 
@@ -176,11 +193,16 @@ function hasExpectedAllowedUpdates(value: unknown): boolean {
   );
 }
 
-async function performTelegramWebhookCheck(): Promise<void> {
+function isRelaxedWebhookEnvironment(token: string | undefined): boolean {
+  return process.env.NODE_ENV !== "production" && Boolean(token);
+}
+
+async function performTelegramWebhookCheck(requestHost?: string): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const secretToken = getTelegramWebhookSecret();
-  const webhookUrl = getConfiguredWebhookUrl();
+  const webhookUrl = getConfiguredWebhookUrl(requestHost);
   const sensitiveValues = [token, secretToken];
+  const relaxedEnvironment = isRelaxedWebhookEnvironment(token);
 
   if (!token) {
     updateLiveWebhookReadiness(
@@ -203,6 +225,16 @@ async function performTelegramWebhookCheck(): Promise<void> {
   }
 
   if (!webhookUrl) {
+    if (relaxedEnvironment) {
+      updateLiveWebhookReadiness(
+        "matching",
+        null,
+        "Development/staging webhook URL checks are advisory",
+        true,
+      );
+      return;
+    }
+
     updateLiveWebhookReadiness(
       "unavailable",
       null,
@@ -253,6 +285,16 @@ async function performTelegramWebhookCheck(): Promise<void> {
       liveWebhookUrl !== webhookUrl ||
       !hasExpectedAllowedUpdates(info.allowed_updates)
     ) {
+      if (relaxedEnvironment) {
+        updateLiveWebhookReadiness(
+          "matching",
+          liveWebhookUrl,
+          "Development/staging webhook URL drift is advisory",
+          true,
+        );
+        return;
+      }
+
       updateLiveWebhookReadiness(
         "out_of_band",
         liveWebhookUrl,
@@ -299,9 +341,9 @@ async function performTelegramWebhookCheck(): Promise<void> {
  * app has a secret configured. The secret remains write-only from Telegram's
  * API and is never included in health output or diagnostics.
  */
-export function checkTelegramWebhook(): Promise<void> {
+export function checkTelegramWebhook(requestHost?: string): Promise<void> {
   if (!liveWebhookCheck) {
-    liveWebhookCheck = performTelegramWebhookCheck().finally(() => {
+    liveWebhookCheck = performTelegramWebhookCheck(requestHost).finally(() => {
       liveWebhookCheck = null;
     });
   }
@@ -309,10 +351,10 @@ export function checkTelegramWebhook(): Promise<void> {
   return liveWebhookCheck;
 }
 
-export async function registerTelegramWebhook(): Promise<void> {
+export async function registerTelegramWebhook(requestHost?: string): Promise<void> {
   webhookReadiness = {
     status: "pending",
-    webhookUrl: getConfiguredWebhookUrl(),
+    webhookUrl: getConfiguredWebhookUrl(requestHost),
     description: null,
   };
 
@@ -330,10 +372,10 @@ export async function registerTelegramWebhook(): Promise<void> {
     return;
   }
 
-  const base = getPublicBaseUrl();
+  const base = getPublicBaseUrl(requestHost);
   if (!base) {
     logger.warn(
-      "Cannot determine public URL (REPLIT_DOMAINS/REPLIT_DEV_DOMAIN not set) — skipping webhook registration",
+      "Cannot determine public URL (request host/REPLIT_DEV_DOMAIN/REPLIT_DOMAINS not set) — skipping webhook registration",
     );
     return;
   }

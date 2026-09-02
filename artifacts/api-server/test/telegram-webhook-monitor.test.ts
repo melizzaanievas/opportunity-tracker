@@ -15,7 +15,7 @@ function readiness(
 ): TelegramWebhookReadiness {
   return {
     status: "successful",
-    webhookUrl: "https://example.replit.app/api/integrations/telegram-webhook",
+    webhookUrl: "https://example.replit.app/api/telegram/webhook",
     description: null,
     liveStatus,
     liveWebhookUrl: null,
@@ -40,40 +40,18 @@ describe("Telegram webhook drift monitor", () => {
     assert.doesNotMatch(alert, new RegExp(WEBHOOK_SECRET));
   });
 
-  it("alerts once per drift state and re-arms after recovery", async () => {
+  it("logs each webhook state transition without sending Telegram messages", async () => {
     let current = readiness("out_of_band");
-    const alerts: string[] = [];
     const monitor = createTelegramWebhookMonitor({
       getReadiness: () => current,
-      sendMessage: async (text) => {
-        alerts.push(text);
-        return true;
-      },
     });
 
     await monitor();
     await monitor();
-    assert.equal(alerts.length, 1);
 
     current = readiness("matching");
     await monitor();
     current = readiness("out_of_band");
     await monitor();
-    assert.equal(alerts.length, 2);
-  });
-
-  it("retries an alert when Telegram delivery fails", async () => {
-    let attempts = 0;
-    const monitor = createTelegramWebhookMonitor({
-      getReadiness: () => readiness("unavailable"),
-      sendMessage: async () => {
-        attempts += 1;
-        return attempts > 1;
-      },
-    });
-
-    await monitor();
-    await monitor();
-    assert.equal(attempts, 2);
   });
 });

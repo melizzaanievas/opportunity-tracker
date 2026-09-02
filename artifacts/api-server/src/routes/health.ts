@@ -12,7 +12,7 @@ const router: IRouter = Router();
 router.get("/healthz", async (req, res) => {
   const refresh = req.query.refresh === "true" || req.query.refresh === "1";
   if (refresh) {
-    await checkTelegramWebhook();
+    await checkTelegramWebhook(req.headers.host);
   }
 
   const data = HealthCheckResponse.parse({
@@ -27,7 +27,7 @@ router.post(
   requireAuth,
   async (req, res): Promise<void> => {
     try {
-      await registerTelegramWebhook();
+      await registerTelegramWebhook(req.headers.host);
       const readiness = getTelegramWebhookReadiness();
 
       if (readiness.status !== "successful") {

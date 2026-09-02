@@ -29,8 +29,10 @@ app.listen(port, (err) => {
   // fully accepting connections before Telegram tries to verify the URL.
   setTimeout(() => {
     void registerTelegramWebhook().catch((err: unknown) => {
-      logger.fatal({ err }, "Telegram webhook registration failed; stopping startup");
-      process.exit(1);
+      logger.error(
+        { err },
+        "Telegram webhook registration failed; server will continue running",
+      );
     });
   }, 3000);
 });

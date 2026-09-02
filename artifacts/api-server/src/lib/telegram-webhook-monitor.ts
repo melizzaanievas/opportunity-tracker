@@ -5,7 +5,6 @@ import {
   type TelegramWebhookLiveStatus,
   type TelegramWebhookReadiness,
 } from "./register-webhook";
-import { sendTelegramMessage } from "./telegram";
 
 const DRIFT_STATUSES = new Set<TelegramWebhookLiveStatus>([
   "out_of_band",
@@ -15,12 +14,10 @@ const DRIFT_STATUSES = new Set<TelegramWebhookLiveStatus>([
 
 type TelegramWebhookCheck = () => Promise<void>;
 type TelegramWebhookReadinessGetter = () => TelegramWebhookReadiness;
-type TelegramMessageSender = (text: string) => Promise<boolean>;
 
 export interface TelegramWebhookMonitorDependencies {
   check?: TelegramWebhookCheck;
   getReadiness?: TelegramWebhookReadinessGetter;
-  sendMessage?: TelegramMessageSender;
 }
 
 function getStatusLabel(status: TelegramWebhookLiveStatus): string {
@@ -67,11 +64,11 @@ export function buildTelegramWebhookDriftAlert(
 }
 
 /**
- * Creates a webhook monitor with transition-based alert suppression.
+ * Creates a console-only webhook monitor with transition-based log suppression.
  *
- * A failed delivery is not treated as notified, so the next scheduled check
- * can retry it. Recovery clears the suppression key and allows a later drift
- * to alert again.
+ * Webhook diagnostics must never send messages to the configured Telegram chat.
+ * Repeated checks with the same state are also suppressed so a persistent
+ * problem cannot spam the server logs.
  */
 export function createTelegramWebhookMonitor(
   dependencies: TelegramWebhookMonitorDependencies = {},
@@ -79,34 +76,33 @@ export function createTelegramWebhookMonitor(
   const check = dependencies.check ?? checkTelegramWebhook;
   const getReadiness =
     dependencies.getReadiness ?? getTelegramWebhookReadiness;
-  const sendMessage = dependencies.sendMessage ?? sendTelegramMessage;
-  let lastAlertedStatus: TelegramWebhookLiveStatus | null = null;
+  let lastLoggedStatus: TelegramWebhookLiveStatus | null = null;
 
   return async () => {
     await check();
 
     const readiness = getReadiness();
     const status = readiness.liveStatus;
-    if (!status || !DRIFT_STATUSES.has(status)) {
-      lastAlertedStatus = null;
+    if (!status) {
       return;
     }
 
-    if (status === lastAlertedStatus) {
+    if (status === lastLoggedStatus) {
       return;
     }
 
-    const alert = buildTelegramWebhookDriftAlert(readiness);
-    if (!alert) {
-      return;
-    }
+    lastLoggedStatus = status;
+    const details = {
+      status,
+      webhookUrl: readiness.webhookUrl,
+      liveWebhookUrl: readiness.liveWebhookUrl,
+      description: readiness.liveDescription,
+    };
 
-    const sent = await sendMessage(alert);
-    if (sent) {
-      lastAlertedStatus = status;
-      logger.warn({ status }, "Telegram webhook drift alert sent");
-    } else {
-      logger.warn({ status }, "Telegram webhook drift alert could not be sent");
+    if (status === "matching") {
+      logger.info(details, "Telegram webhook status changed");
+    } else if (DRIFT_STATUSES.has(status)) {
+      logger.warn(details, "Telegram webhook status changed");
     }
   };
 }
