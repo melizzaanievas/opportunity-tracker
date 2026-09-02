@@ -53,27 +53,30 @@ const TYPE_ICONS = {
 };
 
 const CATEGORY_OPTIONS = [
-  { value: "job", label: "Jobs", singularLabel: "Job", icon: Briefcase },
-  { value: "grant", label: "Grants", singularLabel: "Grant", icon: Banknote },
-  { value: "casting", label: "Casting", singularLabel: "Casting", icon: Clapperboard },
+  { value: "job", types: ["job"], label: "Jobs", singularLabel: "Job", icon: Briefcase },
+  {
+    value: "grants-and-fellowships",
+    types: ["grant", "grant-fellowship"],
+    label: "Grants & Fellowships",
+    singularLabel: "Grant / Fellowship",
+    icon: Banknote,
+  },
+  { value: "casting", types: ["casting"], label: "Casting", singularLabel: "Casting", icon: Clapperboard },
   {
     value: "singing-competition",
+    types: ["singing-competition"],
     label: "Singing Competitions",
     singularLabel: "Singing Competition",
     icon: Mic2,
   },
-  {
-    value: "grant-fellowship",
-    label: "Grant / Fellowship",
-    singularLabel: "Grant / Fellowship",
-    icon: GraduationCap,
-  },
-  { value: "other", label: "Other", singularLabel: "Other", icon: FileQuestion },
+  { value: "other", types: ["other"], label: "Other", singularLabel: "Other", icon: FileQuestion },
 ] as const;
 
 const CATEGORY_LABELS = Object.fromEntries(
-  CATEGORY_OPTIONS.map((category) => [category.value, category.singularLabel]),
-) as Record<(typeof CATEGORY_OPTIONS)[number]["value"], string>;
+  CATEGORY_OPTIONS.flatMap((category) =>
+    category.types.map((type) => [type, category.singularLabel]),
+  ),
+) as Record<Opportunity["type"], string>;
 
 const STATUS_CONFIG: Record<
   string,
@@ -132,6 +135,9 @@ const FILTERS: { value: ListOpportunitiesStatus | "all"; label: string }[] = [
 ];
 
 type DashboardView = "grid" | "kanban" | "calendar";
+type DashboardCategoryFilter =
+  | (typeof CATEGORY_OPTIONS)[number]["value"]
+  | "all";
 
 const VIEW_MODES: {
   value: DashboardView;
@@ -210,6 +216,12 @@ function getDashboardGreeting(date: Date) {
   return "Good evening, Melizza";
 }
 
+function getBreakdownNumberClass(count: number) {
+  return count === 0
+    ? "text-slate-600"
+    : "text-indigo-300 font-semibold";
+}
+
 export default function Dashboard() {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [quote, setQuote] = useState<DashboardQuote>(() =>
@@ -217,7 +229,7 @@ export default function Dashboard() {
   );
   const [statusFilter, setStatusFilter] = useState<ListOpportunitiesStatus | "all">("all");
   const [categoryFilter, setCategoryFilter] =
-    useState<Opportunity["type"] | "all">("all");
+    useState<DashboardCategoryFilter>("all");
   const [viewMode, setViewMode] = useState<DashboardView>("grid");
   const [selectedOpportunity, setSelectedOpportunity] =
     useState<Opportunity | null>(null);
@@ -227,12 +239,16 @@ export default function Dashboard() {
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
   const { data: allOpportunities, isLoading: allOpportunitiesLoading } =
     useListOpportunities();
-  const { data: opportunities, isLoading: opsLoading } = useListOpportunities(
-    statusFilter === "all" && categoryFilter === "all"
+  const apiCategoryFilter =
+    categoryFilter === "all" || categoryFilter === "grants-and-fellowships"
+      ? undefined
+      : categoryFilter;
+  const { data: fetchedOpportunities, isLoading: opsLoading } = useListOpportunities(
+    statusFilter === "all" && !apiCategoryFilter
       ? undefined
       : {
           ...(statusFilter === "all" ? {} : { status: statusFilter }),
-          ...(categoryFilter === "all" ? {} : { type: categoryFilter }),
+          ...(apiCategoryFilter ? { type: apiCategoryFilter } : {}),
         },
   );
   const testTelegram = useTestTelegramAlert();
@@ -267,6 +283,19 @@ export default function Dashboard() {
     return () => controller.abort();
   }, []);
 
+  const opportunities = useMemo(() => {
+    const source = fetchedOpportunities ?? [];
+    if (categoryFilter === "all") return source;
+    const category = CATEGORY_OPTIONS.find(
+      (option) => option.value === categoryFilter,
+    );
+    return category
+      ? source.filter((opportunity) =>
+          (category.types as readonly string[]).includes(opportunity.type),
+        )
+      : source;
+  }, [categoryFilter, fetchedOpportunities]);
+
   const breakdownRows = useMemo(() => {
     const source = allOpportunities ?? [];
     return CATEGORY_OPTIONS.map((category) => ({
@@ -274,11 +303,13 @@ export default function Dashboard() {
       counts: BREAKDOWN_STAGES.map((stage) =>
         source.filter(
           (opportunity) =>
-            opportunity.type === category.value &&
+            (category.types as readonly string[]).includes(opportunity.type) &&
             (stage.statuses as readonly string[]).includes(opportunity.status),
         ).length,
       ),
-      total: source.filter((opportunity) => opportunity.type === category.value).length,
+      total: source.filter((opportunity) =>
+        (category.types as readonly string[]).includes(opportunity.type),
+      ).length,
     }));
   }, [allOpportunities]);
 
@@ -633,13 +664,17 @@ export default function Dashboard() {
               </p>
             </div>
             <div
-              className="dashboard-category-filter-row"
+              className="dashboard-category-filter-row flex gap-2 overflow-x-auto pb-2 scrollbar-none"
               role="toolbar"
               aria-label="Filter opportunities by category"
             >
               <button
                 type="button"
-                className={`dashboard-category-filter ${categoryFilter === "all" ? "is-active" : ""}`}
+                className={`dashboard-category-filter ${
+                  categoryFilter === "all"
+                    ? "is-active bg-indigo-600 text-white"
+                    : "bg-slate-800/60 text-slate-400 hover:text-white border border-slate-700/50"
+                }`}
                 onClick={() => setCategoryFilter("all")}
                 aria-pressed={categoryFilter === "all"}
                 data-testid="button-category-filter-all"
@@ -651,7 +686,11 @@ export default function Dashboard() {
                 return (
                   <button
                     type="button"
-                    className={`dashboard-category-filter ${active ? "is-active" : ""}`}
+                    className={`dashboard-category-filter ${
+                      active
+                        ? "is-active bg-indigo-600 text-white"
+                        : "bg-slate-800/60 text-slate-400 hover:text-white border border-slate-700/50"
+                    }`}
                     key={value}
                     onClick={() => setCategoryFilter(value)}
                     aria-pressed={active}
@@ -673,54 +712,115 @@ export default function Dashboard() {
               <div />
             </div>
           ) : (
-            <div className="dashboard-breakdown-matrix" role="table">
-              <div className="dashboard-breakdown-row dashboard-breakdown-header" role="row">
-                <div className="dashboard-breakdown-category-cell" role="columnheader">
-                  Category
-                </div>
-                {BREAKDOWN_STAGES.map((stage) => (
-                  <div
-                    className="dashboard-breakdown-stage-cell"
-                    role="columnheader"
-                    key={stage.label}
-                    title={"description" in stage ? stage.description : ""}
-                  >
-                    {stage.label}
-                  </div>
-                ))}
-                <div className="dashboard-breakdown-total-cell" role="columnheader">
-                  Total
-                </div>
-              </div>
-              {breakdownRows.map(({ value, label, icon: Icon, counts, total }) => (
-                <div className="dashboard-breakdown-row" role="row" key={value}>
-                  <button
-                    type="button"
-                    className={`dashboard-breakdown-category-cell dashboard-breakdown-category-button ${categoryFilter === value ? "is-active" : ""}`}
-                    onClick={() => setCategoryFilter(value)}
-                    aria-pressed={categoryFilter === value}
-                    role="rowheader"
-                    data-testid={`button-breakdown-category-${value}`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span>{label}</span>
-                  </button>
-                  {counts.map((count, index) => (
-                    <div
-                      className="dashboard-breakdown-stage-cell dashboard-breakdown-count"
-                      role="cell"
-                      key={`${value}-${BREAKDOWN_STAGES[index]?.label}`}
-                      aria-label={`${count} ${label} opportunities in ${BREAKDOWN_STAGES[index]?.label}`}
+            <>
+              <table className="dashboard-breakdown-desktop-table hidden w-full md:table">
+                <thead>
+                  <tr>
+                    <th scope="col">Category</th>
+                    {BREAKDOWN_STAGES.map((stage) => (
+                      <th scope="col" key={stage.label} title={"description" in stage ? stage.description : ""}>
+                        {stage.label}
+                      </th>
+                    ))}
+                    <th scope="col">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {breakdownRows.map(({ value, label, icon: Icon, counts, total }) => (
+                    <tr
+                      className="dashboard-breakdown-row border-b border-slate-800/60 transition-colors hover:bg-slate-800/30"
+                      key={value}
                     >
-                      {count}
-                    </div>
+                      <th scope="row" className="dashboard-breakdown-category-cell">
+                        <button
+                          type="button"
+                          className={`dashboard-breakdown-category-button ${categoryFilter === value ? "is-active" : ""}`}
+                          onClick={() => setCategoryFilter(value)}
+                          aria-pressed={categoryFilter === value}
+                          data-testid={`button-breakdown-category-${value}`}
+                        >
+                          <Icon className="h-4 w-4" />
+                          <span>{label}</span>
+                        </button>
+                      </th>
+                      {counts.map((count, index) => (
+                        <td
+                          className={`dashboard-breakdown-number ${getBreakdownNumberClass(count)}`}
+                          key={`${value}-${BREAKDOWN_STAGES[index]?.label}`}
+                          aria-label={`${count} ${label} opportunities in ${BREAKDOWN_STAGES[index]?.label}`}
+                        >
+                          {count}
+                        </td>
+                      ))}
+                      <td
+                        className={`dashboard-breakdown-total-cell ${getBreakdownNumberClass(total)}`}
+                      >
+                        {total}
+                      </td>
+                    </tr>
                   ))}
-                  <div className="dashboard-breakdown-total-cell" role="cell">
-                    {total}
-                  </div>
-                </div>
-              ))}
-            </div>
+                </tbody>
+              </table>
+
+              <div className="dashboard-breakdown-mobile-cards block md:hidden">
+                {breakdownRows.map(({ value, label, icon: Icon, counts, total }) => {
+                  const activeStageTotal = counts
+                    .slice(0, 3)
+                    .reduce((sum, count) => sum + count, 0);
+                  const progressColors = [
+                    "dashboard-progress-amber",
+                    "dashboard-progress-blue",
+                    "dashboard-progress-green",
+                  ];
+                  const progressLabels = ["To Apply", "Applied", "Interviewing"];
+
+                  return (
+                    <article
+                      className="dashboard-breakdown-mobile-card bg-slate-900/70 border border-slate-800 rounded-xl p-4 mb-3"
+                      key={value}
+                    >
+                      <button
+                        type="button"
+                        className={`dashboard-breakdown-mobile-header ${categoryFilter === value ? "is-active" : ""}`}
+                        onClick={() => setCategoryFilter(value)}
+                        aria-pressed={categoryFilter === value}
+                        data-testid={`button-mobile-breakdown-category-${value}`}
+                      >
+                        <span className="dashboard-breakdown-mobile-title">
+                          <Icon className="h-4 w-4" />
+                          {label}
+                        </span>
+                        <span className="dashboard-breakdown-total-badge">{total}</span>
+                      </button>
+                      <div
+                        className="dashboard-breakdown-progress"
+                        role="img"
+                        aria-label={`${counts[0]} To Apply, ${counts[1]} Applied, ${counts[2]} Interviewing`}
+                      >
+                        {counts.slice(0, 3).map((count, index) => (
+                          <span
+                            className={`dashboard-breakdown-progress-segment ${progressColors[index]} ${count === 0 ? "is-empty" : ""}`}
+                            key={progressLabels[index]}
+                            style={{
+                              width: `${activeStageTotal > 0 ? (count / activeStageTotal) * 100 : 33.333}%`,
+                            }}
+                          />
+                        ))}
+                      </div>
+                      <div className="dashboard-breakdown-mobile-footer">
+                        {counts.slice(0, 3).map((count, index) => (
+                          <span key={progressLabels[index]}>
+                            <strong className={getBreakdownNumberClass(count)}>{count}</strong>{" "}
+                            {progressLabels[index]}
+                            {index < 2 ? " •" : ""}
+                          </span>
+                        ))}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </>
           )}
         </section>
 
