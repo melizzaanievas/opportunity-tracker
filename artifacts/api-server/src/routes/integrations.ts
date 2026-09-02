@@ -2,9 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { eq } from "drizzle-orm";
 import { db, opportunitiesTable } from "../db";
 import { requireAuth } from "../middlewares/auth";
-import {
-  AddToCalendarParams,
-} from "@workspace/api-zod";
+import { AddToCalendarParams } from "@workspace/api-zod";
 import {
   getAuthUrl,
   getStoredToken,
@@ -17,17 +15,19 @@ import { logger } from "../lib/logger";
 const router: IRouter = Router();
 
 // Add to Google Calendar
-router.post("/opportunities/:id/calendar", requireAuth, async (req, res): Promise<void> => {
+router.post("/opportunities/:id/calendar", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const params = AddToCalendarParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
-        const [opp] = await db
-          .select()
-          .from(opportunitiesTable)
-          .where(eq(opportunitiesTable.id, oppId));
+  const oppId = params.data.id;
+
+  const [opp] = await db
+    .select()
+    .from(opportunitiesTable)
+    .where(eq(opportunitiesTable.id, oppId));
 
   if (!opp) {
     res.status(404).json({ error: "Opportunity not found" });
@@ -42,7 +42,7 @@ router.post("/opportunities/:id/calendar", requireAuth, async (req, res): Promis
   // Check if we have a stored token
   const token = await getStoredToken();
   if (!token) {
-    const authUrl = getAuthUrl(params.data.id);
+    const authUrl = getAuthUrl(oppId);
     res.json({ success: false, authUrl, message: null });
     return;
   }
@@ -58,11 +58,11 @@ router.post("/opportunities/:id/calendar", requireAuth, async (req, res): Promis
 });
 
 // Google OAuth callback
-router.get("/integrations/google/callback", async (req, res): Promise<void> => {
+router.get("/integrations/google/callback", async (req: Request, res: Response): Promise<void> => {
   const { code, state, error } = req.query as { code?: string; state?: string; error?: string };
 
   if (error || !code) {
-    req.log.warn({ error }, "Google OAuth error");
+    logger.warn({ error }, "Google OAuth error");
     res.redirect(`/?google_error=1`);
     return;
   }
@@ -97,7 +97,7 @@ router.get("/integrations/google/callback", async (req, res): Promise<void> => {
 });
 
 // Test Telegram alert
-router.post("/integrations/telegram/test", requireAuth, async (req, res): Promise<void> => {
+router.post("/integrations/telegram/test", requireAuth, async (_req: Request, res: Response): Promise<void> => {
   const { text, count } = await buildDailySummary();
   const testText = `🧪 <b>Test Alert</b>\n\nThis is a test of your Opportunity Tracker Telegram integration.\n\n${count > 0 ? text : "No upcoming deadlines to show, but the bot is working!"}`;
   const ok = await sendTelegramMessage(testText);
@@ -149,19 +149,18 @@ export async function runPublicDailySummary(_req: Request, res: Response): Promi
   }
 }
 
-// The public GET endpoint is mounted at the app level in app.ts so it is
-// registered before the complete API router. The POST variant remains
-// protected for dashboard/manual use.
+// Cron route mounted for protected manual triggers
 router.post("/cron-daily-summary", requireAuth, runAuthenticatedDailySummary);
 
 // Webhook endpoint to catch incoming Telegram messages
-router.post("/telegram-webhook", async (req, res) => {
+router.post("/telegram-webhook", async (req: Request, res: Response): Promise<void> => {
   try {
     const { message } = req.body;
 
     // Ignore empty messages
     if (!message || !message.text) {
-      return res.status(200).send("OK");
+      res.status(200).send("OK");
+      return;
     }
 
     const chatId = message.chat.id;
@@ -169,7 +168,8 @@ router.post("/telegram-webhook", async (req, res) => {
 
     // Verify message comes from your allowed Telegram Chat ID
     if (String(chatId) !== String(process.env.TELEGRAM_CHAT_ID)) {
-      return res.status(200).send("OK");
+      res.status(200).send("OK");
+      return;
     }
 
     // Determine if message is a URL or text
@@ -187,38 +187,32 @@ router.post("/telegram-webhook", async (req, res) => {
       title = incomingText.slice(0, 60);
     }
 
-    // Save to PostgreSQL / Supabase
-    // (If using a raw SQL pool or ORM, adapt this insert statement)
-    if (process.env.DATABASE_URL) {
-      const { Pool } = await import("pg");
-      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-      
-      await pool.query(
-        `INSERT INTO opportunities (title, organization, url, status) 
-         VALUES ($1, $2, $3, $4)`,
-        [title, "Telegram Capture", url, "To Apply"]
-      );
-      await pool.end();
-    }
+    // Save directly to database using Drizzle ORM instance
+    await db.insert(opportunitiesTable).values({
+      title,
+      organization: "Telegram Capture",
+      url,
+      status: "To Apply",
+    });
 
-    // Send confirmation message back to your Telegram chat
+    const appUrl = process.env.APP_URL || "https://applynow-melizza.replit.app";
+
+    // Send confirmation message back to Telegram
     const telegramApiUrl = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`;
     await fetch(telegramApiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: chatId,
-        text: `✅ Saved to Opportunity Tracker!\n\n📌 Title: ${title}\n🔗 Link: ${url || "N/A"}`
-      })
+        text: `✅ Saved to Opportunity Tracker!\n\n📌 Title: ${title}\n🔗 View App: ${appUrl}`,
+      }),
     });
 
-    return res.status(200).send("OK");
+    res.status(200).send("OK");
   } catch (error) {
-    console.error("Telegram webhook processing error:", error);
-    // Return 200 so Telegram does not endlessly retry failed delivery
-    return res.status(200).send("OK");
+    logger.error({ error }, "Telegram webhook processing error");
+    res.status(200).send("OK");
   }
 });
-
 
 export default router;
