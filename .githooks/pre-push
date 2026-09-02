@@ -1,0 +1,106 @@
+#!/usr/bin/env sh
+# Pre-push hook: scan outgoing commits for secrets and sensitive data.
+# Blocks the push and prints actionable remediation steps when detected.
+#
+# Wired automatically via `pnpm install` → `prepare` → `git config core.hooksPath .githooks`
+#
+# To bypass a confirmed false positive (use sparingly):
+#   SKIP_SECRET_SCAN=1 git push
+
+# ── Write patterns to a temp file ────────────────────────────────────────────
+# Using -f avoids shell word-splitting and prevents patterns starting with '-'
+# from being misread as grep flags.
+PATTERN_FILE=$(mktemp /tmp/secret-scan-patterns.XXXXXX)
+trap 'rm -f "$PATTERN_FILE"' EXIT INT TERM
+
+cat > "$PATTERN_FILE" << 'PATTERNS'
+-{5}BEGIN (RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY
+[aA][pP][iI][-_]?[kK][eE][yY]\s*[=:]\s*"?[A-Za-z0-9/+_-]{16,}
+[aA][uU][tT][hH][-_]?[tT][oO][kK][eE][nN]\s*[=:]\s*"?[A-Za-z0-9/+_-]{16,}
+[aA][cC][cC][eE][sS][sS][-_]?[kK][eE][yY]\s*[=:]\s*"?[A-Za-z0-9/+_-]{16,}
+[sS][eE][cC][rR][eE][tT][-_]?[kK][eE][yY]\s*[=:]\s*"?[A-Za-z0-9/+_-]{16,}
+[cC][lL][iI][eE][nN][tT][-_]?[sS][eE][cC][rR][eE][tT]\s*[=:]\s*"?[A-Za-z0-9/+_-]{16,}
+AKIA[0-9A-Z]{16}
+ghp_[A-Za-z0-9]{36,}
+github_pat_[A-Za-z0-9_]{82,}
+ghs_[A-Za-z0-9]{36,}
+xox[baprs]-[0-9A-Za-z-]{10,}
+sk-[A-Za-z0-9]{20,}
+AIza[0-9A-Za-z_-]{35}
+ya29\.[0-9A-Za-z_-]+
+[pP][aA][sS][sS][wW][oO][rR][dD]\s*[=:]\s*"[^"]{8,}"
+[pP][rR][iI][vV][aA][tT][eE][-_]?[kK][eE][yY]\s*[=:]\s*"?[A-Za-z0-9/+_-]{16,}
+[0-9]{8,10}:[A-Za-z0-9_-]{35,}
+PATTERNS
+
+FOUND_SECRETS=0
+FINDINGS=""
+
+# ── Scan each ref being pushed ────────────────────────────────────────────────
+while read LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
+  # Skip branch deletions
+  if [ "$LOCAL_SHA" = "0000000000000000000000000000000000000000" ]; then
+    continue
+  fi
+
+  # Determine commit range
+  if [ "$REMOTE_SHA" = "0000000000000000000000000000000000000000" ]; then
+    # New remote branch: scan commits not yet on any remote
+    PATCH=$(git log -p --diff-filter=ACM "$LOCAL_SHA" --not --remotes 2>/dev/null)
+  else
+    PATCH=$(git diff -p --diff-filter=ACM "$REMOTE_SHA..$LOCAL_SHA" 2>/dev/null)
+  fi
+
+  [ -z "$PATCH" ] && continue
+
+  # Only inspect added lines (lines starting with +, excluding +++ header lines)
+  ADDED_LINES=$(printf '%s\n' "$PATCH" | grep '^+' | grep -v '^+++')
+
+  MATCHES=$(printf '%s\n' "$ADDED_LINES" | grep -En -f "$PATTERN_FILE" 2>/dev/null || true)
+
+  if [ -n "$MATCHES" ]; then
+    FOUND_SECRETS=1
+    # Show at most 10 matching lines to keep output readable
+    FINDINGS="${FINDINGS}$(printf '%s\n' "$MATCHES" | head -10 | sed 's/^/    /')\n"
+  fi
+done
+
+# ── Report and block ──────────────────────────────────────────────────────────
+if [ "$FOUND_SECRETS" -eq 1 ]; then
+  printf '\n'
+  printf '🔴  Push blocked — potential secrets detected in outgoing commits\n'
+  printf '\n'
+  printf '  Matched lines (first 10 shown per push ref):\n'
+  printf '\n'
+  printf '%b' "$FINDINGS"
+  printf '\n'
+  printf -- '──────────────────────────────────────────────────────────────────────\n'
+  printf '\n'
+  printf '  Remediation steps:\n'
+  printf '\n'
+  printf '  1. Remove the secret from the file and use an environment variable\n'
+  printf '     or a Replit secret instead (Secrets panel → + New secret).\n'
+  printf '\n'
+  printf '  2. If the secret was already committed, rewrite history:\n'
+  printf '       git rebase -i <commit-before-leak>   # drop or edit the bad commit\n'
+  printf '     OR reset the most recent commit:\n'
+  printf '       git reset HEAD~1                      # unstage & recommit cleanly\n'
+  printf '\n'
+  printf '  3. Rotate the leaked credential immediately — treat it as compromised.\n'
+  printf '\n'
+  printf '  4. If the file should never be tracked, add it to .gitignore:\n'
+  printf '       echo "path/to/file" >> .gitignore\n'
+  printf '\n'
+  printf '  To bypass a confirmed false positive:\n'
+  printf '       SKIP_SECRET_SCAN=1 git push\n'
+  printf '  (use sparingly — report false positives so patterns can be improved)\n'
+  printf '\n'
+
+  if [ "${SKIP_SECRET_SCAN:-0}" = "1" ]; then
+    printf '  ⚠️   SKIP_SECRET_SCAN=1 set — bypassing block.\n\n'
+    exit 0
+  fi
+  exit 1
+fi
+
+exit 0
