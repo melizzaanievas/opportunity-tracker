@@ -307,6 +307,64 @@ describe("Telegram webhook registration", () => {
     assert.deepEqual(retryDelays, [5_000]);
   });
 
+  it("uses the bounded fallback for malformed Telegram retry hints", async () => {
+    process.env.REPLIT_DOMAINS = "example.replit.app";
+    delete process.env.REPLIT_DEV_DOMAIN;
+    process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
+    process.env.TELEGRAM_WEBHOOK_SECRET = TELEGRAM_WEBHOOK_SECRET;
+
+    const invalidHints: Array<{ name: string; parameters: unknown }> = [
+      { name: "a missing retry_after value", parameters: {} },
+      { name: "a non-numeric retry_after value", parameters: { retry_after: "2" } },
+      { name: "a negative retry_after value", parameters: { retry_after: -1 } },
+      { name: "a NaN retry_after value", parameters: { retry_after: Number.NaN } },
+      {
+        name: "an Infinity retry_after value",
+        parameters: { retry_after: Number.POSITIVE_INFINITY },
+      },
+    ];
+
+    for (const { name, parameters } of invalidHints) {
+      const retryDelays: number[] = [];
+      const originalSetTimeout = globalThis.setTimeout;
+      const originalFetch = globalThis.fetch;
+      let fetchCalls = 0;
+      globalThis.setTimeout = ((callback, delay) => {
+        retryDelays.push(Number(delay));
+        callback();
+        return 0 as unknown as ReturnType<typeof setTimeout>;
+      }) as typeof setTimeout;
+      globalThis.fetch = (async () => {
+        fetchCalls += 1;
+        if (fetchCalls === 1) {
+          return {
+            ok: false,
+            status: 429,
+            json: async () => ({
+              ok: false,
+              description: "Too Many Requests",
+              parameters,
+            }),
+          } as Response;
+        }
+        return new Response(JSON.stringify({ ok: true, result: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }) as typeof fetch;
+
+      try {
+        await registerTelegramWebhook();
+      } finally {
+        globalThis.setTimeout = originalSetTimeout;
+        globalThis.fetch = originalFetch;
+      }
+
+      assert.equal(fetchCalls, 2, name);
+      assert.deepEqual(retryDelays, [250], name);
+    }
+  });
+
   it("skips registration when the webhook secret is missing", async () => {
     process.env.NODE_ENV = "production";
     process.env.REPLIT_DOMAINS = "example.replit.app";
