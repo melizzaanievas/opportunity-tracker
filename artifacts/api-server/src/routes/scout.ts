@@ -1,6 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { requireAuth } from "../middlewares/auth";
 import { runJobScout } from "../lib/scout";
 
 const router: IRouter = Router();

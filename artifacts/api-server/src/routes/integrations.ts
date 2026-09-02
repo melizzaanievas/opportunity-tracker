@@ -143,7 +143,7 @@ router.get("/integrations/google/callback", requireAuth, async (req, res): Promi
 });
 
 // Test Telegram alert
-router.post("/integrations/telegram/test", requireAuth, async (req, res): Promise<void> => {
+router.post("/integrations/telegram/test", requireAuth, async (_req, res): Promise<void> => {
   const { text, count } = await buildDailySummary();
   const testText = `🧪 <b>Test Alert</b>\n\nThis is a test of your Opportunity Tracker Telegram integration.\n\n${count > 0 ? text : "No upcoming deadlines to show, but the bot is working!"}`;
   const ok = await sendTelegramMessage(testText);

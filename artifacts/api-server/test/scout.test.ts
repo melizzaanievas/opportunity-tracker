@@ -115,7 +115,7 @@ describe("job scout Telegram alerts", () => {
       jobType: "full-time",
     };
 
-    const text = formatScoutAlert(posting, 42);
+    const text = formatScoutAlert(posting);
 
     assert.match(text, /Job Scout Match/);
     assert.match(text, /&lt;Marketing Lead&gt;/);

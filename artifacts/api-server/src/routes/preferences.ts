@@ -1,5 +1,4 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { eq } from "drizzle-orm";
 import { db, preferencesTable } from "../db";
 import { requireAuth } from "../middlewares/auth";
 import { UpdatePreferencesBody } from "@workspace/api-zod";

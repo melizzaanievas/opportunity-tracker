@@ -5,7 +5,7 @@ import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
-router.get("/dashboard/stats", requireAuth, async (req, res): Promise<void> => {
+router.get("/dashboard/stats", requireAuth, async (_req, res): Promise<void> => {
   const now = new Date();
   const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   const todayStr = now.toISOString().slice(0, 10);

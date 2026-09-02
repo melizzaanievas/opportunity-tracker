@@ -3,7 +3,7 @@ import { logger } from "./lib/logger";
 import { startCronJobs } from "./lib/cron";
 import { registerTelegramWebhook } from "./lib/register-webhook";
 
-const rawPort = process.env["PORT"];
+const rawPort = process.env.PORT;
 
 if (!rawPort) {
   throw new Error(

@@ -218,7 +218,7 @@ export async function getScoutPreferences(): Promise<ScoutPreferences> {
   };
 }
 
-export function formatScoutAlert(job: ScoutPosting, jobId: number): string {
+export function formatScoutAlert(job: ScoutPosting): string {
   const description = job.description
     ? `${escapeTelegramHtml(job.description.slice(0, 700))}${job.description.length > 700 ? "…" : ""}`
     : "No description was provided by the feed.";
@@ -302,7 +302,7 @@ export async function runJobScout(): Promise<ScoutRunResult> {
       }
 
       const messageId = await sendScoutTelegramMessage(
-        formatScoutAlert(posting, candidate.id),
+        formatScoutAlert(posting),
         candidate.id,
       );
       if (messageId === null) {
