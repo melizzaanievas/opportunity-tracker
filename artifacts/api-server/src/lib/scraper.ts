@@ -204,21 +204,21 @@ function cleanText(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
-function firstNonEmpty(...values: Array<string | null | undefined>): string | null {
-  for (const value of values) {
-    const cleaned = cleanText(value ?? "");
-    if (cleaned) return cleaned;
-  }
-  return null;
-}
-
 const BOILERPLATE_TITLE_STRINGS = [
   "| Everyone's app platform",
   "Security Check",
   "Log In",
   "Sign Up",
   "| LinkedIn",
+  "- LinkedIn",
   "- Google Forms",
+];
+
+const GENERIC_SUMMARY_PATTERNS = [
+  /^airtable\s+is\s+a\s+low[- ]code\s+platform\b/i,
+  /^linkedin\s+is\s+the\s+world['’]s\s+largest\s+professional\s+network\b/i,
+  /^google\s+forms?\s*[:\-]\s*sign[- ]?in\b/i,
+  /^sign[- ]?in\s+to\s+(?:google\s+)?forms?\b/i,
 ];
 
 function escapeRegExp(value: string): string {
@@ -252,6 +252,31 @@ export function cleanupTitle(value: string | null | undefined): string | null {
   }
 
   return cleaned;
+}
+
+/**
+ * Discard provider-owned marketing copy while preserving real opportunity
+ * summaries. Returning null keeps the value blank for both the add form and
+ * Telegram-created opportunities.
+ */
+export function cleanSummary(value: string | null | undefined): string | null {
+  const cleaned = cleanText(value ?? "");
+  if (!cleaned) return null;
+
+  const normalized = cleaned.replace(/[’]/g, "'").replace(/\s+/g, " ");
+  if (GENERIC_SUMMARY_PATTERNS.some((pattern) => pattern.test(normalized))) {
+    return null;
+  }
+
+  return cleaned.slice(0, 500) || null;
+}
+
+function selectSummary(candidates: Array<string | null | undefined>): string | null {
+  for (const candidate of candidates) {
+    const cleaned = cleanSummary(candidate);
+    if (cleaned) return cleaned;
+  }
+  return null;
 }
 
 function getHostname(input: string): string {
@@ -326,7 +351,7 @@ function extractAirtablePathTitle(input: string): string | null {
 function isGenericTitle(title: string | null, platform: string | null): boolean {
   if (!title) return true;
   if (/everyone's app platform/i.test(title)) return true;
-  if (/security check|log in|sign up/i.test(title)) return true;
+  if (/security check|log in|sign up|sign[- ]?in/i.test(title)) return true;
   if (
     platform === "Airtable" &&
     (/^airtable(?:\s*[|:-].*)?$/i.test(title) ||
@@ -334,9 +359,26 @@ function isGenericTitle(title: string | null, platform: string | null): boolean 
   ) {
     return true;
   }
+  if (/^linkedin\b.*(?:world['’]s largest professional network|professional network)/i.test(title)) {
+    return true;
+  }
   if (platform === "LinkedIn" && /^linkedin(?:\s+jobs?)?$/i.test(title)) return true;
-  if (platform === "Google Forms" && /^google forms?$/i.test(title)) return true;
+  if (
+    platform === "Google Forms" &&
+    (/^google forms?$/i.test(title) || /^google forms?\s*[:|-]\s*sign[- ]?in/i.test(title))
+  ) {
+    return true;
+  }
   return false;
+}
+
+function selectPageTitle(url: string, candidates: Array<string | null | undefined>): string | null {
+  const platform = getPlatformName(url);
+  for (const candidate of candidates) {
+    const cleaned = cleanupTitle(candidate);
+    if (cleaned && !isGenericTitle(cleaned, platform)) return cleaned;
+  }
+  return null;
 }
 
 function formatShortDate(deadline: string | null): string | null {
@@ -491,7 +533,7 @@ export async function scrapeUrl(url: string): Promise<ScrapedResult> {
     const twitterTitle = $('meta[name="twitter:title"]').attr("content");
     const htmlTitle = $("title").text();
     const h1 = $("h1").first().text();
-    const pageTitle = firstNonEmpty(ogTitle, twitterTitle, htmlTitle, h1);
+    const pageTitle = selectPageTitle(initialUrl.href, [ogTitle, twitterTitle, htmlTitle, h1]);
 
     // Remove noise before extracting body text so navigation dates and
     // unrelated footer timestamps do not become the opportunity deadline.
@@ -501,7 +543,7 @@ export async function scrapeUrl(url: string): Promise<ScrapedResult> {
     const ogDesc = $('meta[property="og:description"]').attr("content");
     const metaDesc = $('meta[name="description"]').attr("content");
     const firstPara = $("article p, main p, .content p, p").first().text();
-    const summary = cleanText(ogDesc ?? metaDesc ?? firstPara ?? "").slice(0, 500) || null;
+    const summary = selectSummary([ogDesc, metaDesc, firstPara]);
 
     // Prefer explicit deadline metadata and <time> values, then inspect the
     // visible page text for labeled or standalone date patterns.

@@ -49,7 +49,7 @@ export default function AddOpportunity() {
             url: data.url,
             title: data.title || "",
             deadline: data.deadline || "",
-            summary: data.summary || "",
+            summary: data.summary?.trim() || "",
             keyActionSteps: data.keyActionSteps || ""
           }));
           setIsManual(true); // show form
