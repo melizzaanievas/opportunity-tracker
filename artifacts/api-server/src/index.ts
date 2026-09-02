@@ -2,6 +2,10 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { startCronJobs } from "./lib/cron";
 import { registerTelegramWebhook } from "./lib/register-webhook";
+import { handleTelegramWebhook } from "../telegram/webhook";
+
+// Register the Telegram Webhook handler endpoint
+app.post("/api/telegram/webhook", handleTelegramWebhook);
 
 const rawPort = process.env.PORT;
 
