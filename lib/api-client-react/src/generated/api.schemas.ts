@@ -141,6 +141,7 @@ export interface OpportunityPatch {
 }
 
 export interface ScrapeRequest {
+  /** @pattern ^https?:// */
   url: string;
 }
 

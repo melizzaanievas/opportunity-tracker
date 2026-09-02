@@ -11,7 +11,7 @@ import {
   ListOpportunitiesQueryParams,
   ScrapeOpportunityUrlBody,
 } from "@workspace/api-zod";
-import { scrapeUrl } from "../lib/scraper";
+import { scrapeUrl, UnsafeScrapeUrlError } from "../lib/scraper";
 
 const router: IRouter = Router();
 
@@ -84,8 +84,16 @@ router.post("/opportunities/scrape", requireAuth, async (req, res): Promise<void
     return;
   }
 
-  const result = await scrapeUrl(parsed.data.url);
-  res.json({ url: parsed.data.url, ...result });
+  try {
+    const result = await scrapeUrl(parsed.data.url);
+    res.json({ url: parsed.data.url, ...result });
+  } catch (err) {
+    if (err instanceof UnsafeScrapeUrlError) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    throw err;
+  }
 });
 
 // Get single

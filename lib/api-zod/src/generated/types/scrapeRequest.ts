@@ -7,5 +7,6 @@
  */
 
 export interface ScrapeRequest {
+  /** @pattern ^https?:// */
   url: string;
 }

@@ -122,8 +122,11 @@ export const CreateOpportunityResponse = zod.object({
 /**
  * @summary Scrape a URL to auto-extract opportunity details
  */
+export const scrapeOpportunityUrlBodyUrlRegExp = new RegExp('^https?:/');
+
+
 export const ScrapeOpportunityUrlBody = zod.object({
-  "url": zod.string()
+  "url": zod.string().regex(scrapeOpportunityUrlBodyUrlRegExp)
 })
 
 export const ScrapeOpportunityUrlResponse = zod.object({

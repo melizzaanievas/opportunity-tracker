@@ -591,6 +591,7 @@ components:
       properties:
         url:
           type: string
+          pattern: "^https?://"
 
     ScrapedData:
       type: object

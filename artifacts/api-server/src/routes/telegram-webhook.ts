@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, opportunitiesTable } from "../db";
-import { scrapeUrl } from "../lib/scraper";
+import { scrapeUrl, validateScrapeUrl } from "../lib/scraper";
 import { logger } from "../lib/logger";
 import { buildGoogleCalendarUrl } from "../lib/google-calendar-link";
 
@@ -73,6 +73,7 @@ router.post("/telegram-webhook", async (req, res): Promise<void> => {
 
   try {
     // 1. Scrape the URL
+    await validateScrapeUrl(url);
     const scraped = await scrapeUrl(url);
     const title = scraped.title ?? new URL(url).hostname;
 
