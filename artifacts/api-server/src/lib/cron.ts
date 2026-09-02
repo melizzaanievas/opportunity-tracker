@@ -2,14 +2,16 @@ import cron from "node-cron";
 import { logger } from "./logger";
 import { buildDailySummary, sendTelegramMessage } from "./telegram";
 import { runJobScout } from "./scout";
-import { checkTelegramWebhook } from "./register-webhook";
+import { createTelegramWebhookMonitor } from "./telegram-webhook-monitor";
 
 export function startCronJobs(): void {
+  const monitorTelegramWebhook = createTelegramWebhookMonitor();
+
   cron.schedule(
     "*/5 * * * *",
     () => {
       logger.info("Checking live Telegram webhook configuration");
-      void checkTelegramWebhook().catch((err: unknown) => {
+      void monitorTelegramWebhook().catch((err: unknown) => {
         logger.error({ err }, "Telegram webhook health check failed");
       });
     },

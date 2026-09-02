@@ -13,6 +13,7 @@ export * from './dashboardStatsByStatus';
 export * from './dashboardStatsByType';
 export * from './errorResponse';
 export * from './googleOAuthCallbackParams';
+export * from './healthCheckParams';
 export * from './healthStatus';
 export * from './healthStatusTelegramWebhook';
 export * from './healthStatusTelegramWebhookLiveStatus';

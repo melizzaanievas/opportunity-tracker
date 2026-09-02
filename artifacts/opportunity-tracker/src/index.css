@@ -759,6 +759,72 @@ main, .app-container, #root, #app {
     inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
+.dashboard-webhook-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  border: 1px solid rgba(248, 113, 113, 0.58) !important;
+  border-left: 3px solid #f87171 !important;
+  border-radius: 0.9rem !important;
+  background: rgba(127, 29, 29, 0.24) !important;
+  color: #fee2e2 !important;
+  box-shadow: 0 12px 28px rgba(69, 10, 10, 0.16);
+}
+
+.dashboard-webhook-alert > svg {
+  position: static;
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+  color: #fca5a5 !important;
+}
+
+.dashboard-webhook-alert [data-slot="alert-title"],
+.dashboard-webhook-alert h5 {
+  margin-bottom: 0.3rem;
+  color: #fff1f2 !important;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.dashboard-webhook-alert [data-slot="alert-description"],
+.dashboard-webhook-alert div {
+  color: #fecaca !important;
+}
+
+.dashboard-webhook-alert-details {
+  margin-top: 0.4rem;
+  color: #fda4af !important;
+  font-size: 0.75rem;
+}
+
+.dashboard-webhook-alert-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  border: 1px solid rgba(252, 165, 165, 0.44) !important;
+  border-radius: 999px !important;
+  background: rgba(127, 29, 29, 0.34) !important;
+  color: #ffe4e6 !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.68rem !important;
+  font-weight: 800 !important;
+  padding: 0.4rem 0.7rem;
+  box-shadow: none !important;
+}
+
+.dashboard-webhook-alert-refresh:hover:not(:disabled) {
+  border-color: rgba(254, 205, 211, 0.78) !important;
+  background: rgba(159, 18, 57, 0.42) !important;
+  box-shadow: none !important;
+  transform: translateY(-1px);
+}
+
+.dashboard-webhook-alert-refresh:disabled {
+  cursor: not-allowed;
+  opacity: 0.64;
+}
+
 .dashboard-date-quote-layout {
   display: flex;
   align-items: center;

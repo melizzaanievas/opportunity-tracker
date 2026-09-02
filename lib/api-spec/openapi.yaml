@@ -31,6 +31,13 @@ paths:
       operationId: healthCheck
       tags: [health]
       summary: Health check
+      parameters:
+        - in: query
+          name: refresh
+          required: false
+          description: Refresh the live Telegram webhook inspection before responding
+          schema:
+            type: boolean
       responses:
         "200":
           description: Healthy

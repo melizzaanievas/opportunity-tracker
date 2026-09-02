@@ -16,6 +16,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout";
 import { DashboardCalendar } from "@/components/dashboard-calendar";
+import { TelegramWebhookHealthAlert } from "@/components/telegram-webhook-health-alert";
 import {
   Dialog,
   DialogContent,
@@ -691,6 +692,8 @@ export default function Dashboard() {
             </div>
           </div>
         </section>
+
+        <TelegramWebhookHealthAlert />
 
         <div className="dashboard-main-view" key={viewMode}>
           <div className="dashboard-toolbar my-4">

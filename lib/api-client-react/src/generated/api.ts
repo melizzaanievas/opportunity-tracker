@@ -25,6 +25,7 @@ import type {
   DashboardStats,
   ErrorResponse,
   GoogleOAuthCallbackParams,
+  HealthCheckParams,
   HealthStatus,
   ListOpportunitiesParams,
   LoginCredentials,
@@ -70,20 +71,27 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export const getHealthCheckUrl = () => {
+export const getHealthCheckUrl = (params?: HealthCheckParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/healthz`
+  return stringifiedParams.length > 0 ? `/api/healthz?${stringifiedParams}` : `/api/healthz`
 }
 
 /**
  * @summary Health check
  */
-export const healthCheck = async ( options?: Parameters<typeof customFetch>[1]): Promise<HealthStatus> => {
+export const healthCheck = async (params?: HealthCheckParams, options?: Parameters<typeof customFetch>[1]): Promise<HealthStatus> => {
 
-  return customFetch<HealthStatus>(getHealthCheckUrl(),
+  return customFetch<HealthStatus>(getHealthCheckUrl(params),
   {
     ...options,
     method: 'GET'
@@ -96,23 +104,23 @@ export const healthCheck = async ( options?: Parameters<typeof customFetch>[1]):
 
 
 
-export const getHealthCheckQueryKey = () => {
+export const getHealthCheckQueryKey = (params?: HealthCheckParams,) => {
     return [
-    `/api/healthz`
+    `/api/healthz`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getHealthCheckQueryOptions = <TData = Awaited<ReturnType<typeof healthCheck>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof healthCheck>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getHealthCheckQueryOptions = <TData = Awaited<ReturnType<typeof healthCheck>>, TError = ErrorType<unknown>>(params?: HealthCheckParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof healthCheck>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getHealthCheckQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getHealthCheckQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof healthCheck>>> = ({ signal }) => healthCheck({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof healthCheck>>> = ({ signal }) => healthCheck(params, { signal, ...requestOptions });
 
 
 
@@ -130,11 +138,11 @@ export type HealthCheckQueryError = ErrorType<unknown>
  */
 
 export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof healthCheck>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: HealthCheckParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof healthCheck>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getHealthCheckQueryOptions(options)
+  const queryOptions = getHealthCheckQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

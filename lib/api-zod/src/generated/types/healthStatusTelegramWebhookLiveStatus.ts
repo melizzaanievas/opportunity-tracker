@@ -6,13 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type HealthStatusTelegramWebhookLiveStatus =
-  (typeof HealthStatusTelegramWebhookLiveStatus)[keyof typeof HealthStatusTelegramWebhookLiveStatus];
+export type HealthStatusTelegramWebhookLiveStatus = typeof HealthStatusTelegramWebhookLiveStatus[keyof typeof HealthStatusTelegramWebhookLiveStatus];
+
 
 export const HealthStatusTelegramWebhookLiveStatus = {
-  unknown: "unknown",
-  matching: "matching",
-  out_of_band: "out_of_band",
-  stale: "stale",
-  unavailable: "unavailable",
+  unknown: 'unknown',
+  matching: 'matching',
+  out_of_band: 'out_of_band',
+  stale: 'stale',
+  unavailable: 'unavailable',
 } as const;
