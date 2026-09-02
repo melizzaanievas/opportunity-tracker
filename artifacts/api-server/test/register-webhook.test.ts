@@ -8,6 +8,7 @@ import {
   getTelegramWebhookReadiness,
   registerTelegramWebhook,
 } from "../src/lib/register-webhook.ts";
+import { getTelegramWebhookSecret } from "../src/lib/telegram.ts";
 
 const TELEGRAM_BOT_TOKEN = "register-webhook-test-token";
 const TELEGRAM_WEBHOOK_SECRET = "register-webhook-test-secret";
@@ -19,6 +20,7 @@ const EXPECTED_WEBHOOK_URL =
 const environmentKeys = [
   "REPLIT_DOMAINS",
   "REPLIT_DEV_DOMAIN",
+  "NODE_ENV",
   "TELEGRAM_BOT_TOKEN",
   "TELEGRAM_WEBHOOK_SECRET",
 ] as const;
@@ -306,6 +308,7 @@ describe("Telegram webhook registration", () => {
   });
 
   it("skips registration when the webhook secret is missing", async () => {
+    process.env.NODE_ENV = "production";
     process.env.REPLIT_DOMAINS = "example.replit.app";
     delete process.env.REPLIT_DEV_DOMAIN;
     process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
@@ -333,6 +336,35 @@ describe("Telegram webhook registration", () => {
         "https://example.replit.app/api/integrations/telegram-webhook",
       description: null,
     });
+  });
+
+  it("uses a local fallback secret when development has no configured secret", async () => {
+    process.env.NODE_ENV = "development";
+    process.env.REPLIT_DOMAINS = "example.replit.app";
+    delete process.env.REPLIT_DEV_DOMAIN;
+    process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
+    delete process.env.TELEGRAM_WEBHOOK_SECRET;
+
+    let requestBody: Record<string, unknown> | undefined;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input, init) => {
+      assert.equal(input, TELEGRAM_API_URL);
+      requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof fetch;
+
+    try {
+      await registerTelegramWebhook();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    assert.equal(requestBody?.secret_token, getTelegramWebhookSecret());
+    assert.notEqual(requestBody?.secret_token, undefined);
+    assert.equal(getTelegramWebhookReadiness().status, "successful");
   });
 
   it("exposes a safe failed state through health without exposing credentials", async () => {

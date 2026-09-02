@@ -1,6 +1,7 @@
 - [API routing boundary](api-routing-boundary.md) — Keep public automation endpoints at the Express app boundary before API routing and frontend rewrites.
 - [Artifact build variables](artifact-build-variables.md) — Standalone Vite builds require each artifact's configured PORT and BASE_PATH environment variables.
 - [GitHub branch update behavior](github-branch-update.md) — Existing branches may need an authenticated ref update when the push helper reports BRANCH_ALREADY_EXISTS.
+- [GitHub connector write limits](github-connector-write-limits.md) — Sustained GitHub blob/tree writes can hit connector RPS or Cloudflare limits even when reads remain healthy.
 - [TypeScript source tests](typescript-source-tests.md) — Use the workspace tsx runner for API source tests because native Node ESM misses extensionless imports.
 - [OpenAPI webhook payloads](openapi-webhook-payloads.md) — Use named component refs for webhook request bodies to avoid generated Zod export collisions.
 - [Provider fetch mocks](provider-fetch-mocks.md) — Global provider API stubs must forward local test-server requests to keep HTTP integration tests real.

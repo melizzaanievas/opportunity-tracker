@@ -693,8 +693,6 @@ export default function Dashboard() {
           </div>
         </section>
 
-        <TelegramWebhookHealthAlert />
-
         <div className="dashboard-main-view" key={viewMode}>
           <div className="dashboard-toolbar my-4">
             <div
@@ -1012,6 +1010,9 @@ export default function Dashboard() {
             </>
           )}
         </div>
+        <footer className="dashboard-webhook-alert-footer">
+          <TelegramWebhookHealthAlert />
+        </footer>
       </div>
 
       <Dialog

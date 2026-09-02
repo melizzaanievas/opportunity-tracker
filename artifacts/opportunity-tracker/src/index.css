@@ -759,53 +759,61 @@ main, .app-container, #root, #app {
     inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
+.dashboard-webhook-alert-footer {
+  margin-top: -1rem;
+  padding-top: 0.25rem;
+}
+
 .dashboard-webhook-alert {
+  position: relative;
   display: flex;
   align-items: flex-start;
-  gap: 0.8rem;
-  border: 1px solid rgba(248, 113, 113, 0.58) !important;
-  border-left: 3px solid #f87171 !important;
-  border-radius: 0.9rem !important;
-  background: rgba(127, 29, 29, 0.24) !important;
-  color: #fee2e2 !important;
-  box-shadow: 0 12px 28px rgba(69, 10, 10, 0.16);
+  gap: 0.65rem;
+  border: 1px solid rgba(148, 163, 184, 0.24) !important;
+  border-left: 2px solid rgba(251, 146, 60, 0.72) !important;
+  border-radius: 0.7rem !important;
+  background: rgba(30, 41, 59, 0.48) !important;
+  color: #cbd5e1 !important;
+  padding: 0.7rem 2.5rem 0.7rem 0.85rem !important;
+  box-shadow: none;
 }
 
 .dashboard-webhook-alert > svg {
   position: static;
   flex: 0 0 auto;
   margin-top: 0.1rem;
-  color: #fca5a5 !important;
+  color: #fdba74 !important;
 }
 
 .dashboard-webhook-alert [data-slot="alert-title"],
 .dashboard-webhook-alert h5 {
   margin-bottom: 0.3rem;
-  color: #fff1f2 !important;
-  font-size: 0.86rem;
-  font-weight: 800;
+  color: #e2e8f0 !important;
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .dashboard-webhook-alert [data-slot="alert-description"],
 .dashboard-webhook-alert div {
-  color: #fecaca !important;
+  color: #cbd5e1 !important;
+  font-size: 0.75rem;
 }
 
 .dashboard-webhook-alert-details {
   margin-top: 0.4rem;
-  color: #fda4af !important;
-  font-size: 0.75rem;
+  color: #94a3b8 !important;
+  font-size: 0.7rem;
 }
 
 .dashboard-webhook-alert-refresh {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  margin-top: 0.75rem;
-  border: 1px solid rgba(252, 165, 165, 0.44) !important;
+  margin-top: 0.55rem;
+  border: 1px solid rgba(148, 163, 184, 0.3) !important;
   border-radius: 999px !important;
-  background: rgba(127, 29, 29, 0.34) !important;
-  color: #ffe4e6 !important;
+  background: rgba(51, 65, 85, 0.42) !important;
+  color: #cbd5e1 !important;
   font-family: var(--font-body) !important;
   font-size: 0.68rem !important;
   font-weight: 800 !important;
@@ -814,8 +822,8 @@ main, .app-container, #root, #app {
 }
 
 .dashboard-webhook-alert-refresh:hover:not(:disabled) {
-  border-color: rgba(254, 205, 211, 0.78) !important;
-  background: rgba(159, 18, 57, 0.42) !important;
+  border-color: rgba(203, 213, 225, 0.64) !important;
+  background: rgba(71, 85, 105, 0.5) !important;
   box-shadow: none !important;
   transform: translateY(-1px);
 }
@@ -823,6 +831,32 @@ main, .app-container, #root, #app {
 .dashboard-webhook-alert-refresh:disabled {
   cursor: not-allowed;
   opacity: 0.64;
+}
+
+.dashboard-webhook-alert-close {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: #94a3b8;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.dashboard-webhook-alert-close:hover,
+.dashboard-webhook-alert-close:focus-visible {
+  border-color: rgba(148, 163, 184, 0.35);
+  background: rgba(71, 85, 105, 0.46);
+  color: #f8fafc;
+  outline: none;
 }
 
 .dashboard-date-quote-layout {

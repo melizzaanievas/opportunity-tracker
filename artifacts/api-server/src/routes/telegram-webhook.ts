@@ -14,6 +14,7 @@ import {
   answerTelegramCallbackQuery,
   editTelegramMessage,
   escapeTelegramHtml,
+  getTelegramWebhookSecret,
 } from "../lib/telegram";
 
 const URL_REGEX = /https?:\/\/[^\s<>"]+/i;
@@ -225,7 +226,7 @@ export function createTelegramWebhookRouter(
     req: TelegramWebhookRequest,
     res: TelegramWebhookResponse,
   ): Promise<void> {
-    const configuredWebhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+    const configuredWebhookSecret = getTelegramWebhookSecret();
     const receivedWebhookSecret = req.headers?.[TELEGRAM_WEBHOOK_SECRET_HEADER];
     if (
       !configuredWebhookSecret ||

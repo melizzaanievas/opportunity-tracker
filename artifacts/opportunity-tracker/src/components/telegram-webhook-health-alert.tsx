@@ -2,7 +2,8 @@ import {
   getHealthCheckQueryKey,
   useHealthCheck,
 } from "@workspace/api-client-react";
-import { AlertTriangle, Check, RefreshCw } from "lucide-react";
+import { AlertTriangle, Check, RefreshCw, X } from "lucide-react";
+import { useState } from "react";
 import {
   Alert,
   AlertDescription,
@@ -42,6 +43,7 @@ function getAction(status: string): string {
 }
 
 export function TelegramWebhookHealthAlert() {
+  const [dismissed, setDismissed] = useState(false);
   const { data, isError, isFetching, refetch } = useHealthCheck(
     { refresh: true },
     {
@@ -55,7 +57,12 @@ export function TelegramWebhookHealthAlert() {
   );
 
   const liveStatus = data?.telegramWebhook.liveStatus;
-  if (isError || !liveStatus || !DRIFT_STATUSES.has(liveStatus)) {
+  if (
+    dismissed ||
+    isError ||
+    !liveStatus ||
+    !DRIFT_STATUSES.has(liveStatus)
+  ) {
     return null;
   }
 
@@ -94,6 +101,16 @@ export function TelegramWebhookHealthAlert() {
           </button>
         </AlertDescription>
       </div>
+      <button
+        type="button"
+        className="dashboard-webhook-alert-close"
+        onClick={() => setDismissed(true)}
+        aria-label="Dismiss Telegram webhook alert"
+        title="Dismiss alert"
+        data-testid="button-dismiss-telegram-webhook-health"
+      >
+        <X className="h-4 w-4" aria-hidden="true" />
+      </button>
     </Alert>
   );
 }

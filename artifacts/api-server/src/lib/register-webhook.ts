@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import { getTelegramWebhookSecret } from "./telegram";
 
 /** Returns the best public base URL for this Replit app. */
 function getPublicBaseUrl(): string | null {
@@ -177,7 +178,7 @@ function hasExpectedAllowedUpdates(value: unknown): boolean {
 
 async function performTelegramWebhookCheck(): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
-  const secretToken = process.env.TELEGRAM_WEBHOOK_SECRET;
+  const secretToken = getTelegramWebhookSecret();
   const webhookUrl = getConfiguredWebhookUrl();
   const sensitiveValues = [token, secretToken];
 
@@ -321,7 +322,7 @@ export async function registerTelegramWebhook(): Promise<void> {
     return;
   }
 
-  const secretToken = process.env.TELEGRAM_WEBHOOK_SECRET;
+  const secretToken = getTelegramWebhookSecret();
   if (!secretToken) {
     logger.warn(
       "TELEGRAM_WEBHOOK_SECRET not set — skipping webhook registration",

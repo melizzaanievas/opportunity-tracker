@@ -4,6 +4,21 @@ import { gte, lte, and, ne } from "drizzle-orm";
 import { buildGoogleCalendarUrl } from "./google-calendar-link";
 
 const TELEGRAM_API = "https://api.telegram.org";
+const LOCAL_TELEGRAM_WEBHOOK_SECRET = "local-development-webhook-secret";
+
+/**
+ * Keep local webhook checks usable without weakening production validation.
+ * The development server and test runner use a stable process-local fallback;
+ * deployed production instances must provide the real secret explicitly.
+ */
+export function getTelegramWebhookSecret(): string | undefined {
+  const configuredSecret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
+  if (configuredSecret) return configuredSecret;
+
+  return process.env.NODE_ENV === "production"
+    ? undefined
+    : LOCAL_TELEGRAM_WEBHOOK_SECRET;
+}
 
 export function escapeTelegramHtml(value: string): string {
   return value
