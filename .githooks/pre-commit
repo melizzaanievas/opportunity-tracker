@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Pre-commit hook: block SQLite database files from being committed.
+# Pre-commit hook: block SQLite database files and secrets from being committed.
 # Covers the raw DB file and the WAL/shared-memory side-car files.
 
 BLOCKED=$(git diff --cached --name-only | grep -E '\.(db|db-shm|db-wal|sqlite|sqlite3)$')
@@ -19,3 +19,77 @@ if [ -n "$BLOCKED" ]; then
   echo ""
   exit 1
 fi
+
+# ── Scan staged changes for secrets ────────────────────────────────────────────
+# Use the same patterns as the pre-push hook, but inspect only added staged lines
+# so secrets are caught before they enter local commit history.
+#
+# To bypass a confirmed false positive (use sparingly):
+#   SKIP_SECRET_SCAN=1 git commit
+
+# Using -f avoids shell word-splitting and prevents patterns starting with '-'
+# from being misread as grep flags.
+PATTERN_FILE=$(mktemp /tmp/secret-scan-patterns.XXXXXX)
+trap 'rm -f "$PATTERN_FILE"' EXIT INT TERM
+
+cat > "$PATTERN_FILE" << 'PATTERNS'
+-{5}BEGIN (RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY
+[aA][pP][iI][-_]?[kK][eE][yY]\s*[=:]\s*"?[A-Za-z0-9/+_-]{16,}
+[aA][uU][tT][hH][-_]?[tT][oO][kK][eE][nN]\s*[=:]\s*"?[A-Za-z0-9/+_-]{16,}
+[aA][cC][cC][eE][sS][sS][-_]?[kK][eE][yY]\s*[=:]\s*"?[A-Za-z0-9/+_-]{16,}
+[sS][eE][cC][rR][eE][tT][-_]?[kK][eE][yY]\s*[=:]\s*"?[A-Za-z0-9/+_-]{16,}
+[cC][lL][iI][eE][nN][tT][-_]?[sS][eE][cC][rR][eE][tT]\s*[=:]\s*"?[A-Za-z0-9/+_-]{16,}
+AKIA[0-9A-Z]{16}
+ghp_[A-Za-z0-9]{36,}
+github_pat_[A-Za-z0-9_]{82,}
+ghs_[A-Za-z0-9]{36,}
+xox[baprs]-[0-9A-Za-z-]{10,}
+sk-[A-Za-z0-9]{20,}
+AIza[0-9A-Za-z_-]{35}
+ya29\.[0-9A-Za-z_-]+
+[pP][aA][sS][sS][wW][oO][rR][dD]\s*[=:]\s*"[^"]{8,}"
+[pP][rR][iI][vV][aA][tT][eE][-_]?[kK][eE][yY]\s*[=:]\s*"?[A-Za-z0-9/+_-]{16,}
+[0-9]{8,10}:[A-Za-z0-9_-]{35,}
+PATTERNS
+
+ADDED_LINES=$(git diff --cached -p --diff-filter=ACM | grep '^+' | grep -v '^+++' || true)
+MATCHES=$(printf '%s\n' "$ADDED_LINES" | grep -En -f "$PATTERN_FILE" 2>/dev/null || true)
+
+if [ -n "$MATCHES" ]; then
+  printf '\n'
+  printf '🔴  Commit blocked — potential secrets detected in staged changes\n'
+  printf '\n'
+  printf '  Matched lines (first 10 shown):\n'
+  printf '\n'
+  printf '%s\n' "$MATCHES" | head -10 | sed 's/^/    /'
+  printf '\n'
+  printf -- '──────────────────────────────────────────────────────────────────────\n'
+  printf '\n'
+  printf '  Remediation steps:\n'
+  printf '\n'
+  printf '  1. Remove the secret from the file and use an environment variable\n'
+  printf '     or a Replit secret instead (Secrets panel → + New secret).\n'
+  printf '\n'
+  printf '  2. If the secret was already committed, rewrite history:\n'
+  printf '       git rebase -i <commit-before-leak>   # drop or edit the bad commit\n'
+  printf '     OR reset the most recent commit:\n'
+  printf '       git reset HEAD~1                      # unstage & recommit cleanly\n'
+  printf '\n'
+  printf '  3. Rotate the leaked credential immediately — treat it as compromised.\n'
+  printf '\n'
+  printf '  4. If the file should never be tracked, add it to .gitignore:\n'
+  printf '       echo "path/to/file" >> .gitignore\n'
+  printf '\n'
+  printf '  To bypass a confirmed false positive:\n'
+  printf '       SKIP_SECRET_SCAN=1 git commit\n'
+  printf '  (use sparingly — report false positives so patterns can be improved)\n'
+  printf '\n'
+
+  if [ "${SKIP_SECRET_SCAN:-0}" = "1" ]; then
+    printf '  ⚠️   SKIP_SECRET_SCAN=1 set — bypassing block.\n\n'
+    exit 0
+  fi
+  exit 1
+fi
+
+exit 0
