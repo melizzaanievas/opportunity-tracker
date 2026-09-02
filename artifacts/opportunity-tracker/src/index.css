@@ -780,6 +780,23 @@ main, .app-container, #root, #app {
   color: #f8fafc;
   padding: 1.15rem 1.2rem;
   box-shadow: 0 12px 28px rgba(2, 6, 23, 0.24);
+  appearance: none;
+  text-align: left;
+  font: inherit;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.dashboard-stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.dashboard-stat-card:focus-visible {
+  outline: none;
+}
+
+.dashboard-stat-card.is-active {
+  border-color: rgba(129, 140, 248, 0.72);
+  background: rgba(30, 41, 59, 0.8);
 }
 
 .dashboard-stat-card-warm {
@@ -858,34 +875,21 @@ main, .app-container, #root, #app {
   box-shadow: 0 12px 28px rgba(2, 6, 23, 0.18);
 }
 
-.dashboard-breakdown-heading {
+.dashboard-analytics-heading {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 1.25rem;
-}
-
-.dashboard-breakdown-copy {
-  margin-top: 0.55rem;
-  color: #94a3b8;
-  font-family: var(--font-body);
-  font-size: 0.78rem;
-  line-height: 1.5;
+  margin-bottom: 1rem;
 }
 
 .dashboard-category-filter-row {
   display: flex;
   max-width: 100%;
   align-items: center;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   justify-content: flex-start;
-  overflow-x: auto;
-  padding-bottom: 0.5rem;
-  scrollbar-width: none;
-}
-
-.dashboard-category-filter-row::-webkit-scrollbar {
-  display: none;
+  gap: 0.5rem;
 }
 
 .dashboard-category-filter {
@@ -903,7 +907,8 @@ main, .app-container, #root, #app {
   font-size: 0.62rem !important;
   font-weight: 800 !important;
   letter-spacing: 0.015em;
-  padding: 0.42rem 0.65rem;
+  padding: 0.35rem 0.55rem;
+  white-space: nowrap;
   transition: background 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease;
 }
 
@@ -967,31 +972,20 @@ main, .app-container, #root, #app {
   text-align: left;
 }
 
-.dashboard-breakdown-category-button {
+.dashboard-breakdown-category-name {
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
-  width: 100%;
-  padding: 0;
-  border: 0 !important;
-  background: transparent !important;
-  cursor: pointer;
   color: #e2e8f0;
   font-family: var(--font-body);
   font-size: 0.74rem;
-  font-weight: 800;
+  font-weight: 500;
   text-align: left;
-  transition: background 180ms ease, color 180ms ease;
 }
 
-.dashboard-breakdown-category-button svg {
+.dashboard-breakdown-category-name svg {
   flex: 0 0 auto;
   color: #a5b4fc;
-}
-
-.dashboard-breakdown-category-button:hover,
-.dashboard-breakdown-category-button.is-active {
-  color: #ffffff;
 }
 
 .dashboard-breakdown-number {
@@ -1173,7 +1167,12 @@ main, .app-container, #root, #app {
 }
 
 .dashboard-pipeline-heading {
+  min-width: 0;
+}
+
+.dashboard-pipeline-top-row {
   display: flex;
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
   gap: 1.25rem;
@@ -1195,6 +1194,23 @@ main, .app-container, #root, #app {
   font-size: 0.78rem;
   font-weight: 600;
   line-height: 1.4;
+}
+
+.dashboard-pipeline-filter-bar {
+  width: 100%;
+  max-width: 100%;
+  justify-content: flex-start;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.dashboard-pipeline-filter-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.dashboard-filter-button {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .dashboard-pipeline-controls {
@@ -1228,15 +1244,15 @@ main, .app-container, #root, #app {
 
 .dashboard-opportunity-card {
   min-width: 0;
-  border: 1px solid rgba(226, 232, 240, 0.92);
-  background: rgba(248, 250, 252, 0.98);
-  color: #0f172a;
+  border: 1px solid rgba(71, 85, 105, 0.76);
+  background: rgba(15, 23, 42, 0.78);
+  color: #f8fafc;
   box-shadow: 0 10px 26px rgba(2, 6, 23, 0.2);
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
 .dashboard-opportunity-card:hover {
-  border-color: #94a3b8;
+  border-color: rgba(129, 140, 248, 0.72);
   box-shadow: 0 16px 34px rgba(2, 6, 23, 0.3);
   transform: translateY(-3px);
 }
@@ -1270,10 +1286,10 @@ main, .app-container, #root, #app {
   display: -webkit-box;
   min-height: 3.25rem;
   overflow: hidden;
-  color: #0f172a;
-  font-family: var(--font-heading);
-  font-size: 1.42rem;
-  font-weight: 800;
+  color: #f1f5f9;
+  font-family: var(--font-body);
+  font-size: 1.125rem;
+  font-weight: 600;
   letter-spacing: 0.005em;
   line-height: 1.15;
   text-decoration: none;
@@ -1281,11 +1297,34 @@ main, .app-container, #root, #app {
   -webkit-line-clamp: 2;
 }
 
+.dashboard-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.dashboard-card-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid rgba(71, 85, 105, 0.58);
+  border-radius: 0.55rem;
+  background: rgba(30, 41, 59, 0.58);
+  color: #94a3b8;
+  padding: 0.32rem 0.5rem;
+  line-height: 1.2;
+}
+
+.dashboard-card-meta-pill svg {
+  flex: 0 0 auto;
+  color: #a5b4fc;
+}
+
 .dashboard-card-copy {
   display: -webkit-box;
   min-height: 2.85rem;
   overflow: hidden;
-  color: #64748b;
+  color: #cbd5e1;
   font-family: var(--font-body);
   font-size: 0.78rem;
   line-height: 1.45;
@@ -2107,23 +2146,16 @@ main, .app-container, #root, #app {
 }
 
 @media (max-width: 767px) {
-  .dashboard-pipeline-heading {
+  .dashboard-pipeline-top-row,
+  .dashboard-analytics-heading {
     align-items: flex-start;
     flex-direction: column;
     gap: 1rem;
   }
 
-  .dashboard-pipeline-controls {
+  .dashboard-pipeline-top-row .dashboard-view-toggle,
+  .dashboard-analytics-heading .dashboard-view-toggle {
     width: 100%;
-    align-items: stretch;
-    flex-direction: column;
-    justify-content: flex-start;
-  }
-
-  .dashboard-breakdown-heading {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 1rem;
   }
 
   .dashboard-category-filter-row {

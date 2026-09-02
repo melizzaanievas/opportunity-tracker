@@ -37,6 +37,7 @@ import {
   FileQuestion,
   Grid2X2,
   Loader2,
+  MapPin,
   Mic2,
   Plus,
   Send,
@@ -139,6 +140,12 @@ type DashboardView = "grid" | "kanban" | "calendar" | "analytics";
 type DashboardCategoryFilter =
   | (typeof CATEGORY_OPTIONS)[number]["value"]
   | "all";
+type DashboardSummaryFilter =
+  | "total"
+  | "closing-soon"
+  | "to-apply"
+  | "interviewing"
+  | "none";
 
 const VIEW_MODES: {
   value: DashboardView;
@@ -232,6 +239,8 @@ export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState<ListOpportunitiesStatus | "all">("all");
   const [categoryFilter, setCategoryFilter] =
     useState<DashboardCategoryFilter>("all");
+  const [summaryFilter, setSummaryFilter] =
+    useState<DashboardSummaryFilter>("total");
   const [viewMode, setViewMode] = useState<DashboardView>("grid");
   const [selectedOpportunity, setSelectedOpportunity] =
     useState<Opportunity | null>(null);
@@ -287,16 +296,24 @@ export default function Dashboard() {
 
   const opportunities = useMemo(() => {
     const source = fetchedOpportunities ?? [];
-    if (categoryFilter === "all") return source;
     const category = CATEGORY_OPTIONS.find(
       (option) => option.value === categoryFilter,
     );
-    return category
-      ? source.filter((opportunity) =>
-          (category.types as readonly string[]).includes(opportunity.type),
-        )
-      : source;
-  }, [categoryFilter, fetchedOpportunities]);
+    const categoryFiltered =
+      categoryFilter === "all" || !category
+        ? source
+        : source.filter((opportunity) =>
+            (category.types as readonly string[]).includes(opportunity.type),
+          );
+
+    if (summaryFilter !== "closing-soon") return categoryFiltered;
+    return categoryFiltered.filter((opportunity) => {
+      if (!opportunity.deadline) return false;
+      const [year, month, day] = opportunity.deadline.split("-").map(Number);
+      const deadlineDate = new Date(year, month - 1, day);
+      return differenceInCalendarDays(deadlineDate, new Date()) <= 7;
+    });
+  }, [categoryFilter, fetchedOpportunities, summaryFilter]);
 
   const breakdownRows = useMemo(() => {
     const source = allOpportunities ?? [];
@@ -331,6 +348,37 @@ export default function Dashboard() {
     ? Math.max(0, stats.total - stats.byStatus.archived)
     : 0;
 
+  const handleSummaryFilter = (
+    filter: Exclude<DashboardSummaryFilter, "none">,
+  ) => {
+    if (filter === "total") {
+      setStatusFilter("all");
+      setCategoryFilter("all");
+      setSummaryFilter("total");
+      return;
+    }
+
+    if (filter === "closing-soon") {
+      setStatusFilter("all");
+      setCategoryFilter("all");
+      setSummaryFilter("closing-soon");
+      return;
+    }
+
+    setStatusFilter(filter);
+    setSummaryFilter(filter);
+  };
+
+  const handleStatusFilter = (filter: ListOpportunitiesStatus | "all") => {
+    setStatusFilter(filter);
+    setSummaryFilter(filter === "all" ? "total" : "none");
+  };
+
+  const handleCategoryFilter = (filter: DashboardCategoryFilter) => {
+    setCategoryFilter(filter);
+    setSummaryFilter("none");
+  };
+
   const handleSetDeadline = (opportunityId: number, deadline: string) => {
     updateOpportunity.mutate(
       { id: opportunityId, data: { deadline } },
@@ -358,52 +406,6 @@ export default function Dashboard() {
     );
   };
 
-  const renderDeadlineBadge = (deadline: string | null | undefined) => {
-    if (!deadline) return null;
-    const date = new Date(deadline);
-    const days = differenceInCalendarDays(date, new Date());
-    const baseClass =
-      "inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[11px] font-bold tracking-wide";
-
-    if (days < 0) {
-      return (
-        <span className={`${baseClass} border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-200`}>
-          Past due
-        </span>
-      );
-    }
-
-    if (days === 0) {
-      return (
-        <span className={`${baseClass} border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-200`}>
-          Due today
-        </span>
-      );
-    }
-
-    if (days <= 3) {
-      return (
-        <span className={`${baseClass} border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-400/30 dark:bg-orange-400/10 dark:text-orange-200`}>
-          {days}d left
-        </span>
-      );
-    }
-
-    if (days <= 7) {
-      return (
-        <span className={`${baseClass} border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-200`}>
-          {days}d left
-        </span>
-      );
-    }
-
-    return (
-      <span className={`${baseClass} border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300`}>
-        {days}d left
-      </span>
-    );
-  };
-
   const renderOpportunityCard = (opp: Opportunity) => {
     const Icon = TYPE_ICONS[opp.type] || TYPE_ICONS.other;
     const statusConf = STATUS_CONFIG[opp.status] ?? STATUS_CONFIG["to-apply"];
@@ -423,28 +425,40 @@ export default function Dashboard() {
           <span className="sr-only">View opportunity details</span>
         </Link>
 
-        <div className="relative z-10 flex min-w-0 flex-1 flex-col p-5 pointer-events-none">
+        <div className="relative z-10 flex min-w-0 flex-1 flex-col gap-3 p-5 pointer-events-none">
           <div className="flex min-w-0 items-start justify-between gap-3">
             <div className="dashboard-primary-category-badge">
               <Icon className="h-4 w-4" />
               <span>{CATEGORY_LABELS[opp.type]}</span>
             </div>
-            <div className="pointer-events-auto">{renderDeadlineBadge(opp.deadline)}</div>
           </div>
 
           <Link
             href={`/opportunity/${opp.id}`}
-            className="dashboard-card-title pointer-events-auto mt-6 line-clamp-2 hover:underline"
+            className="dashboard-card-title pointer-events-auto line-clamp-2 text-lg font-semibold text-slate-100 hover:underline"
             data-testid={`link-opportunity-title-${opp.id}`}
           >
             {opp.title}
           </Link>
 
-          <p className="dashboard-card-copy mt-3 line-clamp-2">
+          <div className="dashboard-card-meta">
+            <span className="dashboard-card-meta-pill text-xs text-slate-400 flex items-center gap-2 mt-2">
+              <MapPin className="h-3.5 w-3.5" />
+              Remote
+            </span>
+            {opp.deadline ? (
+              <span className="dashboard-card-meta-pill text-xs text-slate-400 flex items-center gap-2 mt-2">
+                <CalendarDays className="h-3.5 w-3.5" />
+                Deadline: {formatDisplayDate(opp.deadline)}
+              </span>
+            ) : null}
+          </div>
+
+          <p className="dashboard-card-copy line-clamp-2">
             {opp.summary || ""}
           </p>
 
-          <div className="dashboard-card-footer mt-auto flex items-end justify-between gap-3 pt-6">
+          <div className="dashboard-card-footer mt-auto flex items-end justify-between gap-3">
             <span className={`dashboard-status-badge ${statusConf.badgeClass}`}>
               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: statusConf.dot }} />
               {statusConf.label}
@@ -613,28 +627,22 @@ export default function Dashboard() {
             <>
               <div className="dashboard-pipeline-heading dashboard-analytics-heading">
                 <div>
-                  <h2 className="dashboard-pipeline-title">Your Pipeline</h2>
-                  <p className="dashboard-pipeline-subtitle">Analytics</p>
+                  <h2 id="pipeline-analytics-title" className="dashboard-pipeline-title">
+                    Pipeline Analytics
+                  </h2>
+                  <p className="dashboard-pipeline-subtitle">
+                    Category breakdown across stage pipelines.
+                  </p>
                 </div>
                 {renderViewSwitcher()}
               </div>
               <section
                 id="dashboard-view-analytics"
                 className="dashboard-breakdown-section rounded-2xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-xl"
-                aria-labelledby="productivity-breakdown-title"
+                aria-labelledby="pipeline-analytics-title"
               >
-              <div className="dashboard-breakdown-heading">
-                <div>
-                  <p className="dashboard-section-kicker">Productivity tracking</p>
-                  <h2 id="productivity-breakdown-title" className="dashboard-section-title">
-                    Productivity &amp; Pipeline Breakdown
-                  </h2>
-                  <p className="dashboard-breakdown-copy">
-                    See where each opportunity category sits in your pipeline.
-                  </p>
-                </div>
                 <div
-                  className="dashboard-category-filter-row flex gap-2 overflow-x-auto pb-2 scrollbar-none"
+                  className="dashboard-category-filter-row flex flex-wrap items-center gap-2"
                   role="toolbar"
                   aria-label="Filter analytics by category"
                 >
@@ -645,7 +653,7 @@ export default function Dashboard() {
                         ? "is-active bg-indigo-600 text-white"
                         : "bg-slate-800/60 text-slate-400 hover:text-white border border-slate-700/50"
                     }`}
-                    onClick={() => setCategoryFilter("all")}
+                    onClick={() => handleCategoryFilter("all")}
                     aria-pressed={categoryFilter === "all"}
                     data-testid="button-category-filter-all"
                   >
@@ -662,17 +670,16 @@ export default function Dashboard() {
                             : "bg-slate-800/60 text-slate-400 hover:text-white border border-slate-700/50"
                         }`}
                         key={value}
-                        onClick={() => setCategoryFilter(value)}
+                        onClick={() => handleCategoryFilter(value)}
                         aria-pressed={active}
                         data-testid={`button-category-filter-${value}`}
                       >
                         <Icon className="h-3.5 w-3.5" />
-                        {label}
+                        {value === "singing-competition" ? "Singing" : label}
                       </button>
                     );
                   })}
                 </div>
-              </div>
 
               {allOpportunitiesLoading ? (
                 <div className="dashboard-breakdown-loading" aria-label="Loading productivity breakdown">
@@ -702,7 +709,7 @@ export default function Dashboard() {
                           key={value}
                         >
                           <th scope="row" className="dashboard-breakdown-category-cell">
-                            <span className="dashboard-breakdown-category-button">
+                            <span className="dashboard-breakdown-category-name flex items-center gap-2 text-slate-200 font-medium">
                               <Icon className="h-4 w-4" />
                               <span>{label}</span>
                             </span>
@@ -794,65 +801,101 @@ export default function Dashboard() {
           </div>
         ) : stats ? (
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <div className="dashboard-stat-card">
+            <button
+              type="button"
+              className={`dashboard-stat-card cursor-pointer transition-all hover:border-indigo-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+                summaryFilter === "total"
+                  ? "is-active ring-2 ring-indigo-500 bg-slate-800/80"
+                  : ""
+              }`}
+              onClick={() => handleSummaryFilter("total")}
+              aria-pressed={summaryFilter === "total"}
+              data-testid="button-summary-total"
+            >
               <span className="dashboard-stat-label">Total tracked</span>
               <strong className="dashboard-stat-value">{stats.total}</strong>
               <span className="dashboard-stat-note">Across every stage</span>
-            </div>
-            <div className={`dashboard-stat-card dashboard-stat-card-warm ${stats.closingSoon > 0 ? "is-alert" : "is-zero"}`}>
-              <div className="dashboard-stat-heading">
-                <span className="dashboard-stat-label">Closing soon</span>
-              </div>
+            </button>
+            <button
+              type="button"
+              className={`dashboard-stat-card dashboard-stat-card-warm cursor-pointer transition-all hover:border-indigo-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+                stats.closingSoon > 0 ? "is-alert" : "is-zero"
+              } ${
+                summaryFilter === "closing-soon"
+                  ? "is-active ring-2 ring-indigo-500 bg-slate-800/80"
+                  : ""
+              }`}
+              onClick={() => handleSummaryFilter("closing-soon")}
+              aria-pressed={summaryFilter === "closing-soon"}
+              data-testid="button-summary-closing-soon"
+            >
+              <span className="dashboard-stat-label">Closing soon</span>
               <strong className="dashboard-stat-value">{stats.closingSoon}</strong>
               <span className="dashboard-stat-note">Needs attention this week</span>
-            </div>
-            <div className="dashboard-stat-card dashboard-stat-card-indigo">
-              <div className="dashboard-stat-heading">
-                <span className="dashboard-stat-label">To apply</span>
-              </div>
+            </button>
+            <button
+              type="button"
+              className={`dashboard-stat-card dashboard-stat-card-indigo cursor-pointer transition-all hover:border-indigo-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+                summaryFilter === "to-apply"
+                  ? "is-active ring-2 ring-indigo-500 bg-slate-800/80"
+                  : ""
+              }`}
+              onClick={() => handleSummaryFilter("to-apply")}
+              aria-pressed={summaryFilter === "to-apply"}
+              data-testid="button-summary-to-apply"
+            >
+              <span className="dashboard-stat-label">To apply</span>
               <strong className="dashboard-stat-value">{stats.byStatus["to-apply"]}</strong>
               <span className="dashboard-stat-note">Ready for your next move</span>
-            </div>
-            <div className="dashboard-stat-card dashboard-stat-card-emerald">
-              <div className="dashboard-stat-heading">
-                <span className="dashboard-stat-label">Interviewing</span>
-              </div>
+            </button>
+            <button
+              type="button"
+              className={`dashboard-stat-card dashboard-stat-card-emerald cursor-pointer transition-all hover:border-indigo-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+                summaryFilter === "interviewing"
+                  ? "is-active ring-2 ring-indigo-500 bg-slate-800/80"
+                  : ""
+              }`}
+              onClick={() => handleSummaryFilter("interviewing")}
+              aria-pressed={summaryFilter === "interviewing"}
+              data-testid="button-summary-interviewing"
+            >
+              <span className="dashboard-stat-label">Interviewing</span>
               <strong className="dashboard-stat-value">{stats.byStatus.interviewing}</strong>
               <span className="dashboard-stat-note">Keep the momentum going</span>
-            </div>
+            </button>
           </div>
         ) : null}
 
         <section className="space-y-5">
           <div className="dashboard-pipeline-heading">
-            <div>
-              <h2 className="dashboard-pipeline-title">Your Pipeline</h2>
-              <p className="dashboard-pipeline-subtitle">Active opportunities in motion</p>
-            </div>
-            <div className="dashboard-pipeline-controls">
-              {renderViewSwitcher()}
-              <div
-                className="dashboard-filter-bar"
-                role="tablist"
-                aria-label="Filter opportunities by status"
-              >
-                {FILTERS.map(({ value, label }) => {
-                  const active = statusFilter === value;
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      role="tab"
-                      aria-selected={active}
-                      onClick={() => setStatusFilter(value)}
-                      className={`dashboard-filter-button ${active ? "is-active" : ""}`}
-                      data-testid={`button-filter-${value}`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
+            <div className="dashboard-pipeline-top-row">
+              <div>
+                <h2 className="dashboard-pipeline-title">Your Pipeline</h2>
+                <p className="dashboard-pipeline-subtitle">Active opportunities in motion</p>
               </div>
+              {renderViewSwitcher()}
+            </div>
+            <div
+              className="dashboard-filter-bar dashboard-pipeline-filter-bar mt-4"
+              role="tablist"
+              aria-label="Filter opportunities by status"
+            >
+              {FILTERS.map(({ value, label }) => {
+                const active = statusFilter === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => handleStatusFilter(value)}
+                    className={`dashboard-filter-button ${active ? "is-active" : ""}`}
+                    data-testid={`button-filter-${value}`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
