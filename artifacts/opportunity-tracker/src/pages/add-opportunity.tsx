@@ -172,6 +172,7 @@ export default function AddOpportunity() {
                       <SelectContent>
                         <SelectItem value="to-apply">To Apply</SelectItem>
                         <SelectItem value="applied">Applied</SelectItem>
+                        <SelectItem value="interviewing">Interviewing</SelectItem>
                         <SelectItem value="completed">Completed</SelectItem>
                       </SelectContent>
                     </Select>

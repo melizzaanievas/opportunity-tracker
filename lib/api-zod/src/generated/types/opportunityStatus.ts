@@ -12,5 +12,6 @@ export type OpportunityStatus = typeof OpportunityStatus[keyof typeof Opportunit
 export const OpportunityStatus = {
   'to-apply': 'to-apply',
   applied: 'applied',
+  interviewing: 'interviewing',
   completed: 'completed',
 } as const;

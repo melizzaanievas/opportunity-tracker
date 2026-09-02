@@ -112,7 +112,7 @@ paths:
           name: status
           schema:
             type: string
-            enum: [to-apply, applied, completed]
+            enum: [to-apply, applied, interviewing, completed]
           required: false
           description: Filter by status
         - in: query
@@ -489,11 +489,13 @@ components:
           type: number
         byStatus:
           type: object
-          required: [to-apply, applied, completed]
+          required: [to-apply, applied, interviewing, completed]
           properties:
             to-apply:
               type: number
             applied:
+              type: number
+            interviewing:
               type: number
             completed:
               type: number
@@ -526,7 +528,7 @@ components:
           enum: [job, grant, hackathon, other]
         status:
           type: string
-          enum: [to-apply, applied, completed]
+          enum: [to-apply, applied, interviewing, completed]
         deadline:
           type: ["string", "null"]
           description: ISO date string YYYY-MM-DD
@@ -555,7 +557,7 @@ components:
           enum: [job, grant, hackathon, other]
         status:
           type: string
-          enum: [to-apply, applied, completed]
+          enum: [to-apply, applied, interviewing, completed]
         deadline:
           type: string
         summary:
@@ -576,7 +578,7 @@ components:
           enum: [job, grant, hackathon, other]
         status:
           type: string
-          enum: [to-apply, applied, completed]
+          enum: [to-apply, applied, interviewing, completed]
         deadline:
           type: string
         summary:

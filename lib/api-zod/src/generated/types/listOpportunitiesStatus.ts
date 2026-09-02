@@ -12,5 +12,6 @@ export type ListOpportunitiesStatus = typeof ListOpportunitiesStatus[keyof typeo
 export const ListOpportunitiesStatus = {
   'to-apply': 'to-apply',
   applied: 'applied',
+  interviewing: 'interviewing',
   completed: 'completed',
 } as const;

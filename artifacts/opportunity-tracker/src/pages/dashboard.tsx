@@ -68,6 +68,7 @@ const FILTERS: { value: ListOpportunitiesStatus | "all"; label: string }[] = [
   { value: "all",       label: "All"      },
   { value: "to-apply",  label: "To Apply" },
   { value: "applied",   label: "Applied"  },
+  { value: "interviewing", label: "Interviewing" },
   { value: "completed", label: "Done"     },
 ];
 
@@ -183,8 +184,8 @@ export default function Dashboard() {
         </section>
 
         {statsLoading ? (
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {[1, 2, 3, 4].map((item) => (
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+            {[1, 2, 3, 4, 5].map((item) => (
               <div key={item} className="dashboard-stat-card h-28 animate-pulse" />
             ))}
           </div>
@@ -205,6 +206,11 @@ export default function Dashboard() {
               <span className="dashboard-stat-label">To apply</span>
               <strong className="dashboard-stat-value">{stats.byStatus["to-apply"]}</strong>
               <span className="dashboard-stat-note">Ready for your next move</span>
+            </div>
+            <div className="dashboard-stat-card dashboard-stat-card-indigo">
+              <span className="dashboard-stat-label">Interviewing</span>
+              <strong className="dashboard-stat-value">{stats.byStatus.interviewing}</strong>
+              <span className="dashboard-stat-note">Keep the momentum going</span>
             </div>
             <div className="dashboard-stat-card dashboard-stat-card-green">
               <span className="dashboard-stat-label">Completed</span>

@@ -13,7 +13,7 @@ router.get("/dashboard/stats", requireAuth, async (req, res): Promise<void> => {
 
   const all = await db.select().from(opportunitiesTable);
 
-  const byStatus = { "to-apply": 0, applied: 0, completed: 0 };
+  const byStatus = { "to-apply": 0, applied: 0, interviewing: 0, completed: 0 };
   const byType = { job: 0, grant: 0, hackathon: 0, other: 0 };
 
   for (const opp of all) {

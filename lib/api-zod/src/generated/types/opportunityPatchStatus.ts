@@ -12,5 +12,6 @@ export type OpportunityPatchStatus = typeof OpportunityPatchStatus[keyof typeof 
 export const OpportunityPatchStatus = {
   'to-apply': 'to-apply',
   applied: 'applied',
+  interviewing: 'interviewing',
   completed: 'completed',
 } as const;

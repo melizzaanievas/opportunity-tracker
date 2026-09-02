@@ -53,6 +53,7 @@ export const GetDashboardStatsResponse = zod.object({
   "byStatus": zod.object({
   "to-apply": zod.number(),
   "applied": zod.number(),
+  "interviewing": zod.number(),
   "completed": zod.number()
 }),
   "byType": zod.object({
@@ -68,7 +69,7 @@ export const GetDashboardStatsResponse = zod.object({
  * @summary List all opportunities sorted by deadline
  */
 export const ListOpportunitiesQueryParams = zod.object({
-  "status": zod.enum(['to-apply', 'applied', 'completed']).optional().describe('Filter by status'),
+  "status": zod.enum(['to-apply', 'applied', 'interviewing', 'completed']).optional().describe('Filter by status'),
   "type": zod.enum(['job', 'grant', 'hackathon', 'other']).optional().describe('Filter by type')
 })
 
@@ -77,7 +78,7 @@ export const ListOpportunitiesResponseItem = zod.object({
   "url": zod.string(),
   "title": zod.string(),
   "type": zod.enum(['job', 'grant', 'hackathon', 'other']),
-  "status": zod.enum(['to-apply', 'applied', 'completed']),
+  "status": zod.enum(['to-apply', 'applied', 'interviewing', 'completed']),
   "deadline": zod.string().nullish().describe('ISO date string YYYY-MM-DD'),
   "summary": zod.string().nullish(),
   "keyActionSteps": zod.string().nullish(),
@@ -98,7 +99,7 @@ export const CreateOpportunityBody = zod.object({
   "url": zod.string(),
   "title": zod.string().min(1),
   "type": zod.enum(['job', 'grant', 'hackathon', 'other']),
-  "status": zod.enum(['to-apply', 'applied', 'completed']),
+  "status": zod.enum(['to-apply', 'applied', 'interviewing', 'completed']),
   "deadline": zod.string().optional(),
   "summary": zod.string().optional(),
   "keyActionSteps": zod.string().optional()
@@ -109,7 +110,7 @@ export const CreateOpportunityResponse = zod.object({
   "url": zod.string(),
   "title": zod.string(),
   "type": zod.enum(['job', 'grant', 'hackathon', 'other']),
-  "status": zod.enum(['to-apply', 'applied', 'completed']),
+  "status": zod.enum(['to-apply', 'applied', 'interviewing', 'completed']),
   "deadline": zod.string().nullish().describe('ISO date string YYYY-MM-DD'),
   "summary": zod.string().nullish(),
   "keyActionSteps": zod.string().nullish(),
@@ -151,7 +152,7 @@ export const GetOpportunityResponse = zod.object({
   "url": zod.string(),
   "title": zod.string(),
   "type": zod.enum(['job', 'grant', 'hackathon', 'other']),
-  "status": zod.enum(['to-apply', 'applied', 'completed']),
+  "status": zod.enum(['to-apply', 'applied', 'interviewing', 'completed']),
   "deadline": zod.string().nullish().describe('ISO date string YYYY-MM-DD'),
   "summary": zod.string().nullish(),
   "keyActionSteps": zod.string().nullish(),
@@ -175,7 +176,7 @@ export const UpdateOpportunityBody = zod.object({
   "url": zod.string().optional(),
   "title": zod.string().min(1).optional(),
   "type": zod.enum(['job', 'grant', 'hackathon', 'other']).optional(),
-  "status": zod.enum(['to-apply', 'applied', 'completed']).optional(),
+  "status": zod.enum(['to-apply', 'applied', 'interviewing', 'completed']).optional(),
   "deadline": zod.string().optional(),
   "summary": zod.string().optional(),
   "keyActionSteps": zod.string().optional()
@@ -186,7 +187,7 @@ export const UpdateOpportunityResponse = zod.object({
   "url": zod.string(),
   "title": zod.string(),
   "type": zod.enum(['job', 'grant', 'hackathon', 'other']),
-  "status": zod.enum(['to-apply', 'applied', 'completed']),
+  "status": zod.enum(['to-apply', 'applied', 'interviewing', 'completed']),
   "deadline": zod.string().nullish().describe('ISO date string YYYY-MM-DD'),
   "summary": zod.string().nullish(),
   "keyActionSteps": zod.string().nullish(),

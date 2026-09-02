@@ -24,6 +24,7 @@ export interface AuthStatus {
 export type DashboardStatsByStatus = {
   'to-apply': number;
   applied: number;
+  interviewing: number;
   completed: number;
 };
 
@@ -57,6 +58,7 @@ export type OpportunityStatus = typeof OpportunityStatus[keyof typeof Opportunit
 export const OpportunityStatus = {
   'to-apply': 'to-apply',
   applied: 'applied',
+  interviewing: 'interviewing',
   completed: 'completed',
 } as const;
 
@@ -96,6 +98,7 @@ export type OpportunityInputStatus = typeof OpportunityInputStatus[keyof typeof 
 export const OpportunityInputStatus = {
   'to-apply': 'to-apply',
   applied: 'applied',
+  interviewing: 'interviewing',
   completed: 'completed',
 } as const;
 
@@ -126,6 +129,7 @@ export type OpportunityPatchStatus = typeof OpportunityPatchStatus[keyof typeof 
 export const OpportunityPatchStatus = {
   'to-apply': 'to-apply',
   applied: 'applied',
+  interviewing: 'interviewing',
   completed: 'completed',
 } as const;
 
@@ -209,6 +213,7 @@ export type ListOpportunitiesStatus = typeof ListOpportunitiesStatus[keyof typeo
 export const ListOpportunitiesStatus = {
   'to-apply': 'to-apply',
   applied: 'applied',
+  interviewing: 'interviewing',
   completed: 'completed',
 } as const;
 
@@ -227,3 +232,4 @@ code?: string;
 state?: string;
 error?: string;
 };
+
