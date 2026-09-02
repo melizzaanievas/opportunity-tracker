@@ -11,19 +11,40 @@ interface ScrapedResult {
   scrapeSuccess: boolean;
 }
 
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+].join("|");
+
 const DATE_PATTERNS = [
-  // "Due: January 15, 2025" or "Deadline: Jan 15, 2025"
-  /(?:due|deadline|closes?|apply\s+by|submission\s+date|applications?\s+due)[:\s]+([A-Z][a-z]+ \d{1,2},?\s+\d{4})/gi,
-  // "15 January 2025"
-  /(\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})/gi,
-  // "2025-01-15" or "01/15/2025" or "01-15-2025"
+  // Labeled deadlines: "Deadline: January 15, 2025", "Closing Date: 2025-01-15",
+  // and "Apply by 15 January 2025".
+  new RegExp(
+    String.raw`(?:deadline|closing\s+date|closing|due\s+date|due|apply\s+by|submission\s+date|applications?\s+(?:due|close))\s*[:\-]?\s*(\d{4}-\d{2}-\d{2}|\d{1,2}[/-]\d{1,2}[/-]\d{4}|(?:${MONTH_NAMES})\s+\d{1,2}(?:st|nd|rd|th)?[,]?\s+\d{4}|\d{1,2}\s+(?:${MONTH_NAMES})\s+\d{4})`,
+    "gi",
+  ),
+  // ISO dates are unambiguous and commonly rendered without a label.
   /\b(\d{4}-\d{2}-\d{2})\b/g,
-  /\b(\d{2}\/\d{2}\/\d{4})\b/g,
+  // Slash and hyphen dates are treated as month/day/year unless the first
+  // component is greater than 12, in which case they are day/month/year.
+  /\b(\d{1,2}[/-]\d{1,2}[/-]\d{4})\b/g,
+  // "15 January 2025".
+  new RegExp(String.raw`\b(\d{1,2}\s+(?:${MONTH_NAMES})\s+\d{4})\b`, "gi"),
 ];
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const MAX_REDIRECTS = 5;
-const SCRAPE_TIMEOUT_MS = 15000;
+const SCRAPE_TIMEOUT_MS = 3000;
 
 /**
  * URL validation errors are kept separate from ordinary fetch failures so
@@ -179,26 +200,87 @@ export async function validateScrapeUrl(input: string): Promise<URL> {
   return parsed;
 }
 
-function extractDate(text: string): string | null {
-  for (const pattern of DATE_PATTERNS) {
-    pattern.lastIndex = 0;
-    const match = pattern.exec(text);
-    if (match) {
-      try {
-        const parsed = new Date(match[1]);
-        if (!isNaN(parsed.getTime())) {
-          return parsed.toISOString().slice(0, 10);
-        }
-      } catch {
-        // ignore parse errors
-      }
-    }
+function cleanText(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function firstNonEmpty(...values: Array<string | null | undefined>): string | null {
+  for (const value of values) {
+    const cleaned = cleanText(value ?? "");
+    if (cleaned) return cleaned;
   }
   return null;
 }
 
-function cleanText(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
+function toIsoDate(year: number, month: number, day: number): string | null {
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() !== month - 1 ||
+    parsed.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return parsed.toISOString().slice(0, 10);
+}
+
+function parseDateValue(value: string): string | null {
+  const normalized = cleanText(value)
+    .replace(/(\d{1,2})(?:st|nd|rd|th)\b/gi, "$1")
+    .replace(/\s+/g, " ");
+
+  const isoMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(normalized);
+  if (isoMatch) {
+    return toIsoDate(Number(isoMatch[1]), Number(isoMatch[2]), Number(isoMatch[3]));
+  }
+
+  const numericMatch = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/.exec(normalized);
+  if (numericMatch) {
+    const first = Number(numericMatch[1]);
+    const second = Number(numericMatch[2]);
+    const year = Number(numericMatch[3]);
+    const month = first > 12 ? second : first;
+    const day = first > 12 ? first : second;
+    return toIsoDate(year, month, day);
+  }
+
+  const monthFirstMatch = new RegExp(
+    String.raw`^(${MONTH_NAMES})\s+(\d{1,2}),?\s+(\d{4})$`,
+    "i",
+  ).exec(normalized);
+  if (monthFirstMatch) {
+    const month =
+      MONTH_NAMES.split("|").findIndex(
+        (name) => name.toLowerCase() === monthFirstMatch[1].toLowerCase(),
+      ) + 1;
+    return toIsoDate(Number(monthFirstMatch[3]), month, Number(monthFirstMatch[2]));
+  }
+
+  const dayFirstMatch = new RegExp(
+    String.raw`^(\d{1,2})\s+(${MONTH_NAMES})\s+(\d{4})$`,
+    "i",
+  ).exec(normalized);
+  if (dayFirstMatch) {
+    const month =
+      MONTH_NAMES.split("|").findIndex(
+        (name) => name.toLowerCase() === dayFirstMatch[2].toLowerCase(),
+      ) + 1;
+    return toIsoDate(Number(dayFirstMatch[3]), month, Number(dayFirstMatch[1]));
+  }
+
+  return null;
+}
+
+function extractDate(text: string): string | null {
+  for (const pattern of DATE_PATTERNS) {
+    pattern.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(text)) !== null) {
+      const parsed = parseDateValue(match[1]);
+      if (parsed) return parsed;
+    }
+  }
+  return null;
 }
 
 export async function scrapeUrl(url: string): Promise<ScrapedResult> {
@@ -237,15 +319,16 @@ export async function scrapeUrl(url: string): Promise<ScrapedResult> {
     const html = await res.text();
     const $ = cheerio.load(html);
 
-    // Remove noise
-    $("script, style, nav, footer, header").remove();
-
     // Title
     const ogTitle = $('meta[property="og:title"]').attr("content");
     const twitterTitle = $('meta[name="twitter:title"]').attr("content");
     const htmlTitle = $("title").text();
     const h1 = $("h1").first().text();
-    const title = cleanText(ogTitle ?? twitterTitle ?? h1 ?? htmlTitle ?? "");
+    const title = firstNonEmpty(ogTitle, twitterTitle, htmlTitle, h1);
+
+    // Remove noise before extracting body text so navigation dates and
+    // unrelated footer timestamps do not become the opportunity deadline.
+    $("script, style, nav, footer, header").remove();
 
     // Summary
     const ogDesc = $('meta[property="og:description"]').attr("content");
@@ -253,11 +336,20 @@ export async function scrapeUrl(url: string): Promise<ScrapedResult> {
     const firstPara = $("article p, main p, .content p, p").first().text();
     const summary = cleanText(ogDesc ?? metaDesc ?? firstPara ?? "").slice(0, 500) || null;
 
-    // Full body text for deadline extraction
+    // Prefer explicit deadline metadata and <time> values, then inspect the
+    // visible page text for labeled or standalone date patterns.
     const bodyText = $("body").text();
-
-    // Deadline
-    const deadline = extractDate(bodyText);
+    const deadlineMetadata = [
+      $('meta[property="og:deadline"]').attr("content"),
+      $('meta[name="deadline"]').attr("content"),
+      $('meta[name="applicationDeadline"]').attr("content"),
+      $('meta[itemprop="deadline"]').attr("content"),
+      $('meta[itemprop="applicationDeadline"]').attr("content"),
+      $("time[datetime]").first().attr("datetime"),
+    ]
+      .filter((value): value is string => Boolean(value))
+      .join(" ");
+    const deadline = extractDate(deadlineMetadata) ?? extractDate(bodyText);
 
     // Key action steps from lists
     const listItems: string[] = [];
