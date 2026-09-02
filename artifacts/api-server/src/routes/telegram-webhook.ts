@@ -1,4 +1,4 @@
-import { Router, type IRouter, type Request, type Response } from "express";
+import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, opportunitiesTable, scoutJobsTable } from "../db";
 import {
@@ -14,8 +14,6 @@ import {
   editTelegramMessage,
   escapeTelegramHtml,
 } from "../lib/telegram";
-
-/* ── helpers ── */
 
 const URL_REGEX = /https?:\/\/[^\s<>"]+/i;
 
@@ -35,6 +33,20 @@ interface TelegramUpdate {
       chat: { id: number | string };
     };
   };
+}
+
+type SendReply = (
+  chatId: number | string,
+  text: string,
+  replyToMessageId?: number,
+) => Promise<void>;
+
+interface TelegramWebhookDependencies {
+  validateScrapeUrl?: typeof validateScrapeUrl;
+  scrapeUrl?: typeof scrapeUrl;
+  sendReply?: SendReply;
+  editTelegramMessage?: typeof editTelegramMessage;
+  answerTelegramCallbackQuery?: typeof answerTelegramCallbackQuery;
 }
 
 async function sendReply(
@@ -61,117 +73,13 @@ async function sendReply(
   }
 }
 
-export function createTelegramWebhookRouter(
-  dependencies: {
-    validateScrapeUrl?: typeof validateScrapeUrl;
-    scrapeUrl?: typeof scrapeUrl;
-    sendReply?: typeof sendReply;
-  } = {},
-): IRouter {
-  const router: IRouter = Router();
-  const validate = dependencies.validateScrapeUrl ?? validateScrapeUrl;
-  const scrape = dependencies.scrapeUrl ?? scrapeUrl;
-  const reply = dependencies.sendReply ?? sendReply;
-
-  /* ── Webhook endpoint (no session auth — called by Telegram's servers) ── */
-  router.post("/telegram-webhook", async (req, res): Promise<void> => {
-    // Always acknowledge immediately — Telegram retries on non-200
-    res.sendStatus(200);
-
-    const update = req.body as TelegramUpdate;
-    const message = update?.message;
-    if (!message?.text) return;
-
-    const configuredChatId = process.env.TELEGRAM_CHAT_ID;
-    const incomingChatId = String(message.chat.id);
-
-    // Security: only process messages from the configured chat
-    if (!configuredChatId || incomingChatId !== String(configuredChatId)) {
-      logger.warn(
-        { incomingChatId, configuredChatId },
-        "Telegram webhook: message from unknown chat — ignored",
-      );
-      return;
-    }
-
-    const text = message.text.trim();
-    const urlMatch = URL_REGEX.exec(text);
-    if (!urlMatch) {
-      // Not a URL — ignore silently (could be a command or plain text)
-      return;
-    }
-
-    const url = urlMatch[0];
-    const chatId = message.chat.id;
-    const messageId = message.message_id;
-
-    logger.info({ url }, "Telegram webhook: URL detected, scraping…");
-
-    try {
-      // 1. Scrape the URL
-      await validate(url);
-      const scraped = await scrape(url);
-      const userTitle = cleanupTitle(text.replace(url, " "));
-      const title =
-        userTitle ??
-        resolveOpportunityTitle(url, scraped.title, scraped.deadline);
-
-      // 2. Insert into DB
-      const [inserted] = await db
-        .insert(opportunitiesTable)
-        .values({
-          url,
-          title,
-          type: "other",
-          status: "to-apply",
-          deadline: scraped.deadline ?? null,
-          summary: scraped.summary ?? null,
-          keyActionSteps: scraped.keyActionSteps ?? null,
-          createdAt: new Date().toISOString(),
-        })
-        .returning({
-          id: opportunitiesTable.id,
-          title: opportunitiesTable.title,
-          deadline: opportunitiesTable.deadline,
-        });
-
-      logger.info(
-        { id: inserted.id, title: inserted.title },
-        "Telegram webhook: opportunity saved",
-      );
-
-      // 3. Reply to the user
-      const deadlineText = inserted.deadline
-        ? `\n📅 Deadline: <b>${inserted.deadline}</b>`
-        : "";
-      const googleCalUrl = buildGoogleCalendarUrl({
-        title: inserted.title,
-        deadline: inserted.deadline,
-        summary: scraped.summary,
-        url,
-      });
-      const calendarLink = `<a href="${googleCalUrl}">📅 Add to Google Calendar</a>`;
-      const replyText = `✅ <b>Opportunity saved!</b>\n\n📌 <b>${inserted.title}</b>${deadlineText}\n\n${calendarLink}\n\n<i>Open your dashboard to view and add tasks.</i>`;
-      await reply(chatId, replyText, messageId);
-    } catch (err) {
-      logger.error(
-        { err, url },
-        "Telegram webhook: failed to save opportunity",
-      );
-      await reply(
-        chatId,
-        `⚠️ Could not save that link. The page may be inaccessible or require login.\n\n<code>${url}</code>`,
-        messageId,
-      );
-    }
-  });
-
-  return router;
-}
-
 async function handleScoutCallback(
   callbackQuery: NonNullable<TelegramUpdate["callback_query"]>,
   configuredChatId: string,
+  dependencies: Pick<
+    TelegramWebhookDependencies,
+    "editTelegramMessage" | "answerTelegramCallbackQuery"
+  >,
 ): Promise<void> {
   const callbackMessage = callbackQuery.message;
   if (
@@ -182,9 +90,11 @@ async function handleScoutCallback(
     return;
   }
 
+  const answer = dependencies.answerTelegramCallbackQuery ?? answerTelegramCallbackQuery;
+  const edit = dependencies.editTelegramMessage ?? editTelegramMessage;
   const match = /^(add_opp|ignore_opp):(\d+)$/.exec(callbackQuery.data);
   if (!match) {
-    await answerTelegramCallbackQuery(callbackQuery.id, "Unknown scout action.");
+    await answer(callbackQuery.id, "Unknown scout action.");
     return;
   }
 
@@ -196,27 +106,27 @@ async function handleScoutCallback(
     .where(eq(scoutJobsTable.id, jobId));
 
   if (!job) {
-    await answerTelegramCallbackQuery(callbackQuery.id, "This job alert has expired.");
+    await answer(callbackQuery.id, "This job alert has expired.");
     return;
   }
 
   if (action === "ignore_opp") {
     if (job.status === "added") {
-      await editTelegramMessage(
+      await edit(
         callbackMessage.chat.id,
         callbackMessage.message_id,
         `✅ <b>Added to Dashboard</b>\n\n${escapeTelegramHtml(job.title)}`,
       );
-      await answerTelegramCallbackQuery(callbackQuery.id, "This job is already in your dashboard.");
+      await answer(callbackQuery.id, "This job is already in your dashboard.");
       return;
     }
     if (job.status === "ignored") {
-      await editTelegramMessage(
+      await edit(
         callbackMessage.chat.id,
         callbackMessage.message_id,
         `❌ <b>Ignored</b>\n\n${escapeTelegramHtml(job.title)}`,
       );
-      await answerTelegramCallbackQuery(callbackQuery.id, "Already ignored.");
+      await answer(callbackQuery.id, "Already ignored.");
       return;
     }
     if (job.status === "pending") {
@@ -225,27 +135,27 @@ async function handleScoutCallback(
         .set({ status: "ignored" })
         .where(eq(scoutJobsTable.id, job.id));
     }
-    await editTelegramMessage(
+    await edit(
       callbackMessage.chat.id,
       callbackMessage.message_id,
       `❌ <b>Ignored</b>\n\n${escapeTelegramHtml(job.title)}`,
     );
-    await answerTelegramCallbackQuery(callbackQuery.id, "Ignored.");
+    await answer(callbackQuery.id, "Ignored.");
     return;
   }
 
   if (job.status === "ignored") {
-    await answerTelegramCallbackQuery(callbackQuery.id, "This job was already ignored.");
+    await answer(callbackQuery.id, "This job was already ignored.");
     return;
   }
 
   if (job.status === "added" && job.opportunityId) {
-    await editTelegramMessage(
+    await edit(
       callbackMessage.chat.id,
       callbackMessage.message_id,
       `✅ <b>Added to Dashboard</b>\n\n${escapeTelegramHtml(job.title)}`,
     );
-    await answerTelegramCallbackQuery(callbackQuery.id, "Already in your dashboard.");
+    await answer(callbackQuery.id, "Already in your dashboard.");
     return;
   }
 
@@ -272,7 +182,7 @@ async function handleScoutCallback(
   }
 
   if (!opportunityId) {
-    await answerTelegramCallbackQuery(callbackQuery.id, "Could not add this job.");
+    await answer(callbackQuery.id, "Could not add this job.");
     return;
   }
 
@@ -284,97 +194,121 @@ async function handleScoutCallback(
   const company = job.company
     ? `\n🏢 ${escapeTelegramHtml(job.company)}`
     : "";
-  await editTelegramMessage(
+  await edit(
     callbackMessage.chat.id,
     callbackMessage.message_id,
     `✅ <b>Added to Dashboard</b>\n\n<b>${escapeTelegramHtml(job.title)}</b>${company}`,
   );
-  await answerTelegramCallbackQuery(callbackQuery.id, "Added to your dashboard.");
+  await answer(callbackQuery.id, "Added to your dashboard.");
 }
 
-/* ── Webhook endpoint (no session auth — called by Telegram's servers) ── */
-async function handleTelegramUpdate(req: Request, res: Response): Promise<void> {
-  // Always acknowledge immediately — Telegram retries on non-200
-  res.sendStatus(200);
+export function createTelegramWebhookRouter(
+  dependencies: TelegramWebhookDependencies = {},
+): IRouter {
+  const router: IRouter = Router();
+  const validate = dependencies.validateScrapeUrl ?? validateScrapeUrl;
+  const scrape = dependencies.scrapeUrl ?? scrapeUrl;
+  const reply = dependencies.sendReply ?? sendReply;
 
-  const update = req.body as TelegramUpdate;
-  const configuredChatId = process.env.TELEGRAM_CHAT_ID;
-  if (!configuredChatId) return;
+  async function handleTelegramUpdate(
+    req: { body: unknown },
+    res: { sendStatus: (statusCode: number) => unknown },
+  ): Promise<void> {
+    // Always acknowledge immediately — Telegram retries on non-200.
+    res.sendStatus(200);
 
-  if (update?.callback_query) {
-    await handleScoutCallback(update.callback_query, String(configuredChatId));
-    return;
-  }
+    const update = req.body as TelegramUpdate;
+    const configuredChatId = process.env.TELEGRAM_CHAT_ID;
+    if (!configuredChatId) return;
 
-  const message = update?.message;
-  if (!message?.text) return;
+    if (update?.callback_query) {
+      await handleScoutCallback(update.callback_query, String(configuredChatId), dependencies);
+      return;
+    }
 
-  const incomingChatId = String(message.chat.id);
+    const message = update?.message;
+    if (!message?.text) return;
 
-  // Security: only process messages from the configured chat
-  if (!configuredChatId || incomingChatId !== String(configuredChatId)) {
-    logger.warn({ incomingChatId, configuredChatId }, "Telegram webhook: message from unknown chat — ignored");
-    return;
-  }
+    const incomingChatId = String(message.chat.id);
 
-  const text = message.text.trim();
-  const urlMatch = URL_REGEX.exec(text);
-  if (!urlMatch) {
-    // Not a URL — ignore silently (could be a command or plain text)
-    return;
-  }
+    // Security: only process messages from the configured chat.
+    if (incomingChatId !== String(configuredChatId)) {
+      logger.warn(
+        { incomingChatId, configuredChatId },
+        "Telegram webhook: message from unknown chat — ignored",
+      );
+      return;
+    }
 
-  const url = urlMatch[0];
-  const chatId = message.chat.id;
-  const messageId = message.message_id;
+    const text = message.text.trim();
+    const urlMatch = URL_REGEX.exec(text);
+    if (!urlMatch) return;
 
-  logger.info({ url }, "Telegram webhook: URL detected, scraping…");
+    const url = urlMatch[0];
+    const chatId = message.chat.id;
+    const messageId = message.message_id;
 
-  try {
-    // 1. Scrape the URL
-    await validateScrapeUrl(url);
-    const scraped = await scrapeUrl(url);
-    const userTitle = cleanupTitle(text.replace(url, " "));
-    const title =
-      userTitle ?? resolveOpportunityTitle(url, scraped.title, scraped.deadline);
+    logger.info({ url }, "Telegram webhook: URL detected, scraping…");
 
-    // 2. Insert into DB
-    const [inserted] = await db
-      .insert(opportunitiesTable)
-      .values({
+    try {
+      await validate(url);
+      const scraped = await scrape(url);
+      const userTitle = cleanupTitle(text.replace(url, " "));
+      const title =
+        userTitle ??
+        resolveOpportunityTitle(url, scraped.title, scraped.deadline);
+
+      const [inserted] = await db
+        .insert(opportunitiesTable)
+        .values({
+          url,
+          title,
+          type: "other",
+          status: "to-apply",
+          deadline: scraped.deadline ?? null,
+          summary: scraped.summary ?? null,
+          keyActionSteps: scraped.keyActionSteps ?? null,
+          createdAt: new Date().toISOString(),
+        })
+        .returning({
+          id: opportunitiesTable.id,
+          title: opportunitiesTable.title,
+          deadline: opportunitiesTable.deadline,
+        });
+
+      logger.info(
+        { id: inserted.id, title: inserted.title },
+        "Telegram webhook: opportunity saved",
+      );
+
+      const deadlineText = inserted.deadline
+        ? `\n📅 Deadline: <b>${inserted.deadline}</b>`
+        : "";
+      const googleCalUrl = buildGoogleCalendarUrl({
+        title: inserted.title,
+        deadline: inserted.deadline,
+        summary: scraped.summary,
         url,
-        title,
-        type: "other",
-        status: "to-apply",
-        deadline: scraped.deadline ?? null,
-        summary: scraped.summary ?? null,
-        keyActionSteps: scraped.keyActionSteps ?? null,
-        createdAt: new Date().toISOString(),
-      })
-      .returning({ id: opportunitiesTable.id, title: opportunitiesTable.title, deadline: opportunitiesTable.deadline });
-
-    logger.info({ id: inserted.id, title: inserted.title }, "Telegram webhook: opportunity saved");
-
-    // 3. Reply to the user
-    const deadlineText = inserted.deadline ? `\n📅 Deadline: <b>${inserted.deadline}</b>` : "";
-    const googleCalUrl = buildGoogleCalendarUrl({
-      title: inserted.title,
-      deadline: inserted.deadline,
-      summary: scraped.summary,
-      url,
-    });
-    const calendarLink = `<a href="${googleCalUrl}">📅 Add to Google Calendar</a>`;
-    const replyText = `✅ <b>Opportunity saved!</b>\n\n📌 <b>${inserted.title}</b>${deadlineText}\n\n${calendarLink}\n\n<i>Open your dashboard to view and add tasks.</i>`;
-    await sendReply(chatId, replyText, messageId);
-  } catch (err) {
-    logger.error({ err, url }, "Telegram webhook: failed to save opportunity");
-    await sendReply(
-      chatId,
-      `⚠️ Could not save that link. The page may be inaccessible or require login.\n\n<code>${url}</code>`,
-      messageId
-    );
+      });
+      const calendarLink = `<a href="${googleCalUrl}">📅 Add to Google Calendar</a>`;
+      const replyText = `✅ <b>Opportunity saved!</b>\n\n📌 <b>${inserted.title}</b>${deadlineText}\n\n${calendarLink}\n\n<i>Open your dashboard to view and add tasks.</i>`;
+      await reply(chatId, replyText, messageId);
+    } catch (err) {
+      logger.error(
+        { err, url },
+        "Telegram webhook: failed to save opportunity",
+      );
+      await reply(
+        chatId,
+        `⚠️ Could not save that link. The page may be inaccessible or require login.\n\n<code>${url}</code>`,
+        messageId,
+      );
+    }
   }
+
+  router.post("/telegram-webhook", handleTelegramUpdate);
+  router.post("/integrations/telegram-webhook", handleTelegramUpdate);
+  return router;
 }
 
-router.post("/telegram-webhook", handleTelegramUpdate);
-router.post("/integrations/telegram-webhook", handleTelegramUpdate);
+export default createTelegramWebhookRouter();

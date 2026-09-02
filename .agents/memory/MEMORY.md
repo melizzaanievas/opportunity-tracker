@@ -3,3 +3,4 @@
 - [GitHub branch update behavior](github-branch-update.md) — Existing branches may need an authenticated ref update when the push helper reports BRANCH_ALREADY_EXISTS.
 - [TypeScript source tests](typescript-source-tests.md) — Use the workspace tsx runner for API source tests because native Node ESM misses extensionless imports.
 - [OpenAPI webhook payloads](openapi-webhook-payloads.md) — Use named component refs for webhook request bodies to avoid generated Zod export collisions.
+- [Provider fetch mocks](provider-fetch-mocks.md) — Global provider API stubs must forward local test-server requests to keep HTTP integration tests real.
