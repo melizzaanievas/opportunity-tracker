@@ -1,133 +1,88 @@
-# Opportunity Tracker
+# 🎯 Opportunity Tracker & Executive Pipeline Dashboard
 
-Opportunity Tracker is a personal web dashboard and Telegram bot built to capture jobs, grants, and hackathons on mobile and manage them on desktop.
+A sleek, minimalist, multi-platform opportunity management workspace designed to aggregate, track, and streamline applications across jobs, fellowships, casting calls, grants, and competitions. Built with a unified view-switching engine, automated deliverable extraction, and intelligent scouting integrations.
 
-## Core Features
+---
 
-- Capture opportunities from a mobile device through a Telegram bot.
-- Extract useful link details automatically, including titles, summaries, deadlines, and action steps.
-- Generate a one-click Google Calendar invite for each opportunity.
-- Send an automated morning summary to Telegram at 8:00 AM through the built-in scheduler.
-- Review and manage opportunities on desktop with a clean, dark-gothic glassmorphism dashboard.
+## ✨ Features
 
-## Prerequisites
+* **Unified View Switcher System:**
+  * **Grid View:** High-density, customizable cards displaying status, deadlines, and key metadata.
+  * **Kanban Board:** Drag-and-drop pipeline stages (`To Apply`, `Applied / Pending`, `Interviewing`, `Offered`, `Archived`).
+  * **Calendar View:** Interactive visual timeline tracking upcoming deadlines and submission windows.
+  * **Pipeline Analytics:** Dedicated metrics workspace breaking down category distribution without main dashboard clutter.
 
-You need a Telegram bot, a private Telegram chat ID, and a deployment or local environment that can run the web dashboard and API server.
+* **Automated Task & Deliverable Parser:**
+  * Scrapes target application links upon saving.
+  * Auto-extracts required submission deliverables (e.g., CV/Resume, Cover Letter, Portfolio, Audition Video, Headshot) into actionable checklists.
 
-The project uses SQLite for local persistence. The database is created automatically when the API server starts and is ignored by Git.
+* **Multi-Platform Scouting Engine:**
+  * Automated job/opportunity scouting across LinkedIn, Indeed, X (Twitter), and Google Search via SerpAPI/JSearch.
+  * Scheduled Telegram Bot updates delivering daily digests directly to your chat.
 
-## Environment Variables
+* **Interactive Onboarding & Health Diagnostics:**
+  * Step-by-step interactive demo tour powered by `driver.js`.
+  * Auto-healing Telegram webhook registration to prevent environment URL drift.
 
-Add the following values to `.env` for local development or to Replit Secrets for a Replit deployment:
+---
 
-| Variable | Description |
-| --- | --- |
-| `APP_PASSWORD` | Password protection for the web dashboard. |
-| `TELEGRAM_BOT_TOKEN` | Bot token from [@BotFather](https://t.me/BotFather). |
-| `TELEGRAM_CHAT_ID` | Your private Telegram Chat ID. |
-| `TELEGRAM_WEBHOOK_SECRET` | Secret token Telegram sends with webhook requests. |
-| `SESSION_SECRET` | Express session signing key. |
-| `SCOUT_CRON_SECRET` | Optional secret for external `POST /api/cron/scout` triggers. |
+## 🛠️ Tech Stack
 
-Copy `.env.example` to `.env` as a starting point:
+* **Frontend:** React, TypeScript, Tailwind CSS, Lucide React, Framer Motion, Driver.js
+* **Backend:** Node.js, Express, Drizzle ORM, PostgreSQL (Supabase / Neon)
+* **Integrations:** Telegram Bot API, SerpAPI / JSearch API, ZenQuotes API
+* **Deployment:** Node.js / Vercel / Render / Railway
 
-```bash
-cp .env.example .env
-```
+---
 
-Keep `.env` private. Do not commit it or any SQLite database files to Git.
+## 🚀 Getting Started
 
-## Quickstart
+### 1. Prerequisites
 
-### Create a copy on GitHub
+* **Node.js:** `v18.x` or higher
+* **npm:** `v9.x` or higher
+* **PostgreSQL Database:** Supabase, Neon, or local instance
 
-Click **Use this template** on GitHub to create a copy of the repository in your own account.
+### 2. Installation & Setup
 
-### Import the repository into Replit
-
-Create a new Replit app from your GitHub repository. Replit will detect the project configuration and workspace packages.
-
-### Configure secrets
-
-Open the Replit Secrets panel and add `APP_PASSWORD`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, and `TELEGRAM_WEBHOOK_SECRET`. Add `SCOUT_CRON_SECRET` if an external scheduler will call the scout endpoint.
-
-For local development, add the same values to `.env`.
-
-### Run the application
-
-In Replit, click **Start** or use the configured Replit start command.
-
-For a local workspace, start the API server and frontend with:
+Clone the repository and install dependencies:
 
 ```bash
-pnpm --filter @workspace/api-server run dev
-pnpm --filter @workspace/opportunity-tracker run dev
+git clone [https://github.com/melizzaanievas/opportunity-tracker.git](https://github.com/melizzaanievas/opportunity-tracker.git)
+cd opportunity-tracker
+npm install
 ```
 
-If your environment provides an `npm run dev` wrapper, you can use that command instead.
+### 3. Environment Configuration
+Create a .env file in the root directory and populate it based on .env.example:
 
-The API server runs on port `8080` and the frontend runs on port `22507` in the standard workspace configuration.
+```text
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/opportunity_db
 
-### Configure the daily summary
+# Telegram Integration
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+TELEGRAM_WEBHOOK_SECRET=your_telegram_webhook_secret
 
-The API server includes a built-in daily summary schedule for 8:00 AM. The dashboard can also trigger a summary manually after signing in.
-
-## Telegram Setup
-
-- Open [@BotFather](https://t.me/BotFather) in Telegram.
-- Create a bot and copy its token into `TELEGRAM_BOT_TOKEN`.
-- Open the bot from your private Telegram account and send it a message.
-- Find your private chat ID and add it as `TELEGRAM_CHAT_ID`.
-- Start the API server. The bot webhook is registered during server startup.
-- Send an opportunity URL to the bot to capture it.
-
-Only messages and callback actions from the configured `TELEGRAM_CHAT_ID` are accepted by the webhook.
-
-### Automated job scout
-
-Configure the scout through the authenticated `GET /api/preferences` and
-`PUT /api/preferences` endpoints:
-
-```json
-{
-  "targetTitles": ["Web3 Marketing", "Ecosystem Lead"],
-  "preferredLocations": ["Hong Kong", "Remote APAC"],
-  "preferredJobTypes": ["full-time"]
-}
+# External APIs
+SERPAPI_KEY=your_serpapi_key
 ```
 
-The server runs the scout daily at **01:00 UTC (09:00 HKT)** using public
-Remote OK and Remotive feeds. New matches are sent to Telegram with Add to
-Tracker and Ignore buttons. A manual or external run can use
-`POST /api/cron/scout`; authenticated dashboard sessions may call it directly,
-while external schedulers must send `X-Scout-Cron-Secret` matching
-`SCOUT_CRON_SECRET`.
-
-## Project Structure
-
-| Directory | Purpose |
-| --- | --- |
-| `artifacts/opportunity-tracker` | React and Vite desktop dashboard. |
-| `artifacts/api-server` | Express API, SQLite database, scraper, Telegram integration, and calendar support. |
-| `lib/api-spec` | OpenAPI source specification. |
-| `lib/api-client-react` | Generated React Query client. |
-| `lib/api-zod` | Generated Zod schemas. |
-| `lib/db` | Shared database package and schema definitions. |
-
-## Development Commands
+### 4. Database Setup & Migrations
+Push the Drizzle ORM schema to your PostgreSQL database:
 
 ```bash
-pnpm run typecheck
-pnpm run build
-pnpm run audit:deps
+npm run db:push
 ```
 
-After changing the OpenAPI specification, regenerate the API clients and schemas:
+5. Running the Application
+Start the development server (frontend & backend concurrently):
 
 ```bash
-pnpm --filter @workspace/api-spec run codegen
+npm run dev
 ```
 
-## License
+Open your browser and navigate to http://localhost:5000 (or the port specified in your console).
 
-Add the license that matches how you want others to use and distribute this project.
+## 📄 License
+This project is licensed under the MIT License.
