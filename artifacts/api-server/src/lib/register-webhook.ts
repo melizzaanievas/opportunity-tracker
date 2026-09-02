@@ -15,6 +15,8 @@ function getPublicBaseUrl(): string | null {
 }
 
 const TELEGRAM_WEBHOOK_PATH = "/api/integrations/telegram-webhook";
+const TELEGRAM_WEBHOOK_MAX_ATTEMPTS = 3;
+const TELEGRAM_WEBHOOK_RETRY_DELAY_MS = 250;
 
 export type TelegramWebhookRegistrationStatus =
   "pending" | "successful" | "failed";
@@ -66,6 +68,21 @@ function createRegistrationError(
   );
 }
 
+function isRetryableTelegramStatus(status: number): boolean {
+  return (
+    status === 408 ||
+    status === 425 ||
+    status === 429 ||
+    (status >= 500 && status <= 599)
+  );
+}
+
+function waitForRetry(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, TELEGRAM_WEBHOOK_RETRY_DELAY_MS);
+  });
+}
+
 export async function registerTelegramWebhook(): Promise<void> {
   webhookReadiness = {
     status: "pending",
@@ -98,52 +115,75 @@ export async function registerTelegramWebhook(): Promise<void> {
   const webhookUrl = `${base}${TELEGRAM_WEBHOOK_PATH}`;
   const sensitiveValues = [token, secretToken];
 
-  let data: { ok: boolean; description?: string; result?: boolean };
-  try {
-    const res = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        url: webhookUrl,
-        secret_token: secretToken,
-        allowed_updates: ["message", "callback_query"],
-        drop_pending_updates: false,
-      }),
-    });
+  let lastFailure: { description: string; retryable: boolean } | null = null;
 
-    data = (await res.json()) as {
-      ok: boolean;
-      description?: string;
-      result?: boolean;
-    };
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    const safeReason = redactSensitiveValues(reason, sensitiveValues);
-    webhookReadiness = {
-      status: "failed",
-      webhookUrl,
-      description: safeReason,
-    };
-    throw createRegistrationError(webhookUrl, safeReason, []);
+  for (let attempt = 1; attempt <= TELEGRAM_WEBHOOK_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const res = await fetch(
+        `https://api.telegram.org/bot${token}/setWebhook`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url: webhookUrl,
+            secret_token: secretToken,
+            allowed_updates: ["message", "callback_query"],
+            drop_pending_updates: false,
+          }),
+        },
+      );
+      const data = (await res.json()) as {
+        ok: boolean;
+        description?: string;
+        result?: boolean;
+      };
+
+      if (data.ok && res.ok) {
+        webhookReadiness = {
+          status: "successful",
+          webhookUrl,
+          description: null,
+        };
+        logger.info({ webhookUrl }, "Telegram webhook registered");
+        return;
+      }
+
+      const description =
+        data.description?.trim() ||
+        "Telegram did not provide a rejection description";
+      lastFailure = {
+        description,
+        retryable: isRetryableTelegramStatus(res.status),
+      };
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      lastFailure = { description: reason, retryable: true };
+    }
+
+    if (!lastFailure.retryable || attempt === TELEGRAM_WEBHOOK_MAX_ATTEMPTS) {
+      break;
+    }
+
+    logger.warn(
+      {
+        attempt,
+        maxAttempts: TELEGRAM_WEBHOOK_MAX_ATTEMPTS,
+        webhookUrl,
+      },
+      "Temporary Telegram webhook registration failure; retrying",
+    );
+    await waitForRetry();
   }
 
-  if (!data.ok) {
-    const description =
-      data.description?.trim() ||
-      "Telegram did not provide a rejection description";
-    const safeDescription = redactSensitiveValues(description, sensitiveValues);
-    webhookReadiness = {
-      status: "failed",
-      webhookUrl,
-      description: safeDescription,
-    };
-    throw createRegistrationError(webhookUrl, safeDescription, []);
-  }
-
+  const safeDescription = redactSensitiveValues(
+    lastFailure?.description ||
+      "Telegram webhook registration failed without a description",
+    sensitiveValues,
+  );
   webhookReadiness = {
-    status: "successful",
+    status: "failed",
     webhookUrl,
-    description: null,
+    description: safeDescription,
   };
-  logger.info({ webhookUrl }, "Telegram webhook registered");
+  throw createRegistrationError(webhookUrl, safeDescription, []);
 }

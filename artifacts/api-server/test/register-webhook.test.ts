@@ -140,6 +140,70 @@ describe("Telegram webhook registration", () => {
     assert.equal(getTelegramWebhookReadiness().status, "successful");
   });
 
+  it("retries a transient fetch failure and succeeds", async () => {
+    process.env.REPLIT_DOMAINS = "example.replit.app";
+    delete process.env.REPLIT_DEV_DOMAIN;
+    process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
+    process.env.TELEGRAM_WEBHOOK_SECRET = TELEGRAM_WEBHOOK_SECRET;
+
+    let fetchCalls = 0;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => {
+      fetchCalls += 1;
+      if (fetchCalls === 1) {
+        throw new Error("temporary network outage");
+      }
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof fetch;
+
+    try {
+      await registerTelegramWebhook();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    assert.equal(fetchCalls, 2);
+    assert.equal(getTelegramWebhookReadiness().status, "successful");
+  });
+
+  it("retries a retryable Telegram response until it succeeds", async () => {
+    process.env.REPLIT_DOMAINS = "example.replit.app";
+    delete process.env.REPLIT_DEV_DOMAIN;
+    process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
+    process.env.TELEGRAM_WEBHOOK_SECRET = TELEGRAM_WEBHOOK_SECRET;
+
+    let fetchCalls = 0;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => {
+      fetchCalls += 1;
+      if (fetchCalls < 3) {
+        return new Response(
+          JSON.stringify({ ok: false, description: "Telegram is busy" }),
+          {
+            status: 429,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof fetch;
+
+    try {
+      await registerTelegramWebhook();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    assert.equal(fetchCalls, 3);
+    assert.equal(getTelegramWebhookReadiness().status, "successful");
+  });
+
   it("skips registration when the webhook secret is missing", async () => {
     process.env.REPLIT_DOMAINS = "example.replit.app";
     delete process.env.REPLIT_DEV_DOMAIN;
@@ -177,8 +241,10 @@ describe("Telegram webhook registration", () => {
     process.env.TELEGRAM_WEBHOOK_SECRET = TELEGRAM_WEBHOOK_SECRET;
 
     const rejectionDescription = `Webhook URL rejected for ${TELEGRAM_BOT_TOKEN} using ${TELEGRAM_WEBHOOK_SECRET}`;
+    let fetchCalls = 0;
     const originalFetch = globalThis.fetch;
     globalThis.fetch = (async (input) => {
+      fetchCalls += 1;
       const url =
         typeof input === "string"
           ? input
@@ -214,6 +280,7 @@ describe("Telegram webhook registration", () => {
       globalThis.fetch = originalFetch;
     }
 
+    assert.equal(fetchCalls, 1);
     assert.deepEqual(getTelegramWebhookReadiness(), {
       status: "failed",
       webhookUrl:
@@ -233,5 +300,46 @@ describe("Telegram webhook registration", () => {
       JSON.stringify(health),
       new RegExp(TELEGRAM_WEBHOOK_SECRET),
     );
+  });
+
+  it("stops after the retry limit and exposes the final safe transient failure", async () => {
+    process.env.REPLIT_DOMAINS = "example.replit.app";
+    delete process.env.REPLIT_DEV_DOMAIN;
+    process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
+    process.env.TELEGRAM_WEBHOOK_SECRET = TELEGRAM_WEBHOOK_SECRET;
+
+    let fetchCalls = 0;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => {
+      fetchCalls += 1;
+      throw new Error(
+        `temporary failure for ${TELEGRAM_BOT_TOKEN} with ${TELEGRAM_WEBHOOK_SECRET}`,
+      );
+    }) as typeof fetch;
+
+    try {
+      await assert.rejects(registerTelegramWebhook(), (error: unknown) => {
+        assert(error instanceof Error);
+        assert.match(
+          error.message,
+          /https:\/\/example\.replit\.app\/api\/integrations\/telegram-webhook/,
+        );
+        assert.match(
+          error.message,
+          /temporary failure for \[REDACTED\] with \[REDACTED\]/,
+        );
+        return true;
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    assert.equal(fetchCalls, 3);
+    assert.deepEqual(getTelegramWebhookReadiness(), {
+      status: "failed",
+      webhookUrl:
+        "https://example.replit.app/api/integrations/telegram-webhook",
+      description: "temporary failure for [REDACTED] with [REDACTED]",
+    });
   });
 });
