@@ -20,6 +20,10 @@ author = "agent"
 task = "workflow.run"
 args = "audit"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "security-guidance"
+
 [[workflows.workflow]]
 name = "audit"
 author = "agent"
@@ -27,6 +31,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "pnpm audit --audit-level=moderate"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "security-guidance"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm run check:security-guidance"
 
 [workflows.workflow.metadata]
 isValidation = true

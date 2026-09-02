@@ -8,6 +8,7 @@
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
+    "check:security-guidance": "pnpm --filter @workspace/scripts run check-security-guidance",
     "audit:deps": "pnpm audit --audit-level=moderate"
   },
   "private": true,
