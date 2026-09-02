@@ -16,6 +16,7 @@ interface ScrapedResult {
   deadline: string | null;
   summary: string | null;
   keyActionSteps: string | null;
+  actionPlanTasks: string[];
   type: OpportunityCategory;
   scrapeSuccess: boolean;
 }
@@ -219,6 +220,52 @@ const CASTING_CATEGORY_PATTERN =
   /\b(?:audition|casting|role|performer|talent\s+call)\b/i;
 const GRANT_CATEGORY_PATTERN =
   /\b(?:grant|funding|fellowship|bounty|proposal)\b/i;
+
+const ACTION_PLAN_DELIVERABLES: Array<{
+  pattern: RegExp;
+  task: string;
+}> = [
+  {
+    pattern: /\b(?:resume|résumé|cv)\b/i,
+    task: "Update and tailor CV/Resume",
+  },
+  {
+    pattern: /\bcover\s+letter\b|\bstatements?\b/i,
+    task: "Draft cover letter / application statement",
+  },
+  {
+    pattern: /\b(?:video|audition|reel|recording)\b/i,
+    task: "Record & submit video reel / audition recording",
+  },
+  {
+    pattern: /\b(?:headshots?|portfolio)\b/i,
+    task: "Prepare high-res headshot / portfolio links",
+  },
+  {
+    pattern: /\breferences?\b/i,
+    task: "Gather professional reference contacts",
+  },
+  {
+    pattern: /\b(?:proposal|essay)\b/i,
+    task: "Draft project proposal / essay response",
+  },
+  {
+    pattern: /\b(?:demo|code\s+sample|github|repository|repo)\b/i,
+    task: "Prepare project demo or code sample",
+  },
+];
+
+/**
+ * Detect common submission deliverables in visible page text and metadata.
+ * The task order follows the checklist's stable presentation order rather
+ * than the order in which a provider happens to mention each requirement.
+ */
+export function detectActionPlanTasks(text: string): string[] {
+  const normalized = cleanText(text);
+  return ACTION_PLAN_DELIVERABLES.flatMap(({ pattern, task }) =>
+    pattern.test(normalized) ? [task] : [],
+  );
+}
 
 export function detectOpportunityCategory(text: string): OpportunityCategory {
   const normalized = cleanText(text);
@@ -498,6 +545,11 @@ export function parseScrapedHtml(url: string, html: string): ScrapedResult {
   const type = detectOpportunityCategory(
     [titleCandidates.join(" "), bodyText].join(" "),
   );
+  const actionPlanTasks = detectActionPlanTasks(
+    [titleCandidates.join(" "), ogDesc, metaDesc, bodyText]
+      .filter(Boolean)
+      .join(" "),
+  );
 
   // Key action steps from lists
   const listItems: string[] = [];
@@ -514,6 +566,7 @@ export function parseScrapedHtml(url: string, html: string): ScrapedResult {
     deadline,
     summary,
     keyActionSteps,
+    actionPlanTasks,
     type,
     scrapeSuccess: !!(title || summary),
   };
@@ -625,6 +678,7 @@ export async function scrapeUrl(url: string): Promise<ScrapedResult> {
         deadline: null,
         summary: null,
         keyActionSteps: null,
+        actionPlanTasks: [],
         type: "job",
         scrapeSuccess: false,
       };
@@ -642,6 +696,7 @@ export async function scrapeUrl(url: string): Promise<ScrapedResult> {
       deadline: null,
       summary: null,
       keyActionSteps: null,
+      actionPlanTasks: [],
       type: "job",
       scrapeSuccess: false,
     };

@@ -152,6 +152,9 @@ export const ListOpportunitiesResponse = zod.array(ListOpportunitiesResponseItem
  */
 
 
+export const createOpportunityBodyActionPlanTasksMax = 20;
+
+
 
 export const CreateOpportunityBody = zod.object({
   "url": zod.string(),
@@ -161,7 +164,8 @@ export const CreateOpportunityBody = zod.object({
   "status": zod.enum(['to-apply', 'applied', 'interviewing', 'offered', 'archived']),
   "deadline": zod.string().optional(),
   "summary": zod.string().optional(),
-  "keyActionSteps": zod.string().optional()
+  "keyActionSteps": zod.string().optional(),
+  "actionPlanTasks": zod.array(zod.string().min(1)).max(createOpportunityBodyActionPlanTasksMax).optional()
 })
 
 export const CreateOpportunityResponse = zod.object({
@@ -196,6 +200,7 @@ export const ScrapeOpportunityUrlResponse = zod.object({
   "deadline": zod.string().nullish(),
   "summary": zod.string().nullish(),
   "keyActionSteps": zod.string().nullish(),
+  "actionPlanTasks": zod.array(zod.string()).optional(),
   "type": zod.enum(['job', 'grant', 'casting', 'singing-competition', 'grant-fellowship', 'other']),
   "scrapeSuccess": zod.boolean().optional()
 })

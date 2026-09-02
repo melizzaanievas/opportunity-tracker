@@ -1,10 +1,18 @@
 import { Link, useLocation } from "wouter";
 import { useLogout, useGetAuthMe } from "@workspace/api-client-react";
-import { Loader2, Zap, LogOut } from "lucide-react";
+import { Loader2, Zap, LogOut, Plus } from "lucide-react";
 
 const sans  = "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif";
 
-export function AppLayout({ children }: { children: React.ReactNode }) {
+export function AppLayout({
+  children,
+  showAddOpportunity = false,
+  headerActions,
+}: {
+  children: React.ReactNode;
+  showAddOpportunity?: boolean;
+  headerActions?: React.ReactNode;
+}) {
   const [, setLocation] = useLocation();
   const { data: auth, isLoading } = useGetAuthMe();
   const logout = useLogout();
@@ -69,6 +77,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2">
 
             <div className="h-4 w-px hidden sm:block" style={{ background: "rgba(230,220,255,0.15)" }} />
+
+            {headerActions}
+
+            {showAddOpportunity && (
+              <Link
+                href="/add"
+                className="app-nav-add-button inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-md transition-all hover:bg-indigo-500"
+                data-testid="link-nav-add-opportunity"
+              >
+                <Plus className="h-4 w-4" strokeWidth={2.5} />
+                Add Opportunity
+              </Link>
+            )}
 
             {/* Sign out — sans-serif */}
             <button

@@ -644,6 +644,12 @@ components:
           type: string
         keyActionSteps:
           type: string
+        actionPlanTasks:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            minLength: 1
 
     OpportunityPatch:
       type: object
@@ -691,6 +697,10 @@ components:
           type: ["string", "null"]
         keyActionSteps:
           type: ["string", "null"]
+        actionPlanTasks:
+          type: array
+          items:
+            type: string
         type:
           type: string
           enum: [job, grant, casting, singing-competition, grant-fellowship, other]

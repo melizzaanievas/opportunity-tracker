@@ -17,6 +17,7 @@ export interface ScrapedData {
   summary?: string | null;
   /** @nullable */
   keyActionSteps?: string | null;
+  actionPlanTasks?: string[];
   type: ScrapedDataType;
   scrapeSuccess?: boolean;
 }

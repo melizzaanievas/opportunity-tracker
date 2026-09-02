@@ -33,7 +33,8 @@ export default function AddOpportunity() {
     status: "to-apply",
     deadline: "",
     summary: "",
-    keyActionSteps: ""
+    keyActionSteps: "",
+    actionPlanTasks: [],
   });
 
   const handleScrape = (e: React.FormEvent) => {
@@ -51,7 +52,8 @@ export default function AddOpportunity() {
             type: data.type as OpportunityInputType,
             deadline: data.deadline || "",
             summary: data.summary?.trim() || "",
-            keyActionSteps: data.keyActionSteps || ""
+            keyActionSteps: data.keyActionSteps || "",
+            actionPlanTasks: data.actionPlanTasks ?? [],
           }));
           setIsManual(true); // show form
           if (data.scrapeSuccess) {

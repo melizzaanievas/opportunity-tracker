@@ -25,6 +25,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowUpRight,
+  BarChart3,
   Banknote,
   Briefcase,
   CalendarDays,
@@ -134,7 +135,7 @@ const FILTERS: { value: ListOpportunitiesStatus | "all"; label: string }[] = [
   { value: "archived", label: "Archived" },
 ];
 
-type DashboardView = "grid" | "kanban" | "calendar";
+type DashboardView = "grid" | "kanban" | "calendar" | "analytics";
 type DashboardCategoryFilter =
   | (typeof CATEGORY_OPTIONS)[number]["value"]
   | "all";
@@ -144,9 +145,10 @@ const VIEW_MODES: {
   label: string;
   icon: typeof Grid2X2;
 }[] = [
-  { value: "grid", label: "Grid View", icon: Grid2X2 },
-  { value: "kanban", label: "Kanban View", icon: Columns3 },
-  { value: "calendar", label: "Calendar View", icon: CalendarDays },
+  { value: "grid", label: "Grid", icon: Grid2X2 },
+  { value: "kanban", label: "Kanban", icon: Columns3 },
+  { value: "calendar", label: "Calendar", icon: CalendarDays },
+  { value: "analytics", label: "Analytics", icon: BarChart3 },
 ];
 
 const KANBAN_COLUMNS: {
@@ -312,6 +314,11 @@ export default function Dashboard() {
       ).length,
     }));
   }, [allOpportunities]);
+
+  const analyticsRows = useMemo(() => {
+    if (categoryFilter === "all") return breakdownRows;
+    return breakdownRows.filter((row) => row.value === categoryFilter);
+  }, [breakdownRows, categoryFilter]);
 
   const handleTestAlert = () => {
     testTelegram.mutate(undefined, {
@@ -504,37 +511,93 @@ export default function Dashboard() {
     </div>
   );
 
+  const renderViewSwitcher = () => (
+    <div
+      className="dashboard-view-toggle"
+      role="tablist"
+      aria-label="Choose dashboard view"
+    >
+      {VIEW_MODES.map(({ value, label, icon: Icon }) => {
+        const active = viewMode === value;
+
+        return (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            aria-controls={`dashboard-view-${value}`}
+            className={`dashboard-view-button ${
+              active
+                ? "is-active bg-indigo-600 text-white"
+                : "text-slate-400 hover:text-white"
+            }`}
+            onClick={() => setViewMode(value)}
+            data-testid={`button-view-${value}`}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            <span>{label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
-    <AppLayout>
+    <AppLayout
+      showAddOpportunity
+      headerActions={
+        <button
+          onClick={handleTestAlert}
+          disabled={testTelegram.isPending}
+          className="dashboard-ghost-icon-button"
+          aria-label="Send test Telegram alert"
+          title="Send test Telegram alert"
+        >
+          {testTelegram.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+        </button>
+      }
+    >
       <div className="space-y-8 pb-12">
         <section
-          className="dashboard-date-quote-banner mb-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-md"
+          className="dashboard-date-quote-banner mb-6 rounded-2xl border border-slate-800/80 bg-slate-900/60 p-6 backdrop-blur-xl"
           aria-labelledby="dashboard-welcome-title"
           data-testid="dashboard-date-quote-banner"
         >
           <div className="dashboard-date-quote-layout">
-            <div className="dashboard-welcome-block">
+            <div className="dashboard-hero-left">
               <div className="dashboard-welcome-heading">
                 <Sparkles className="h-5 w-5 shrink-0 text-indigo-300" aria-hidden="true" />
-                <div>
-                  <p className="dashboard-section-kicker">Daily check-in</p>
-                  <h2 id="dashboard-welcome-title" className="dashboard-welcome-title">
-                    <span>{getDashboardGreeting(currentDate)}</span>
-                    <span className="dashboard-welcome-separator" aria-hidden="true">·</span>
-                    <time dateTime={currentDate.toISOString().slice(0, 10)}>
-                      {DASHBOARD_DATE_FORMATTER.format(currentDate)}
-                    </time>
+                <div className="min-w-0">
+                  <h2
+                    id="dashboard-welcome-title"
+                    className="dashboard-hero-greeting font-sans text-2xl font-bold text-white"
+                  >
+                    {getDashboardGreeting(currentDate)}
                   </h2>
+                  <time
+                    className="dashboard-hero-date"
+                    dateTime={currentDate.toISOString().slice(0, 10)}
+                  >
+                    {DASHBOARD_DATE_FORMATTER.format(currentDate)}
+                  </time>
+                  <div className="dashboard-hero-meta">
+                    <span className="dashboard-active-pill">
+                      <Circle className="h-2.5 w-2.5 fill-current" />
+                      {statsLoading
+                        ? "Loading active total"
+                        : `${activeOpportunityCount} active`}
+                    </span>
+                  </div>
                 </div>
               </div>
-              <Link href="/add" className="dashboard-banner-action">
-                <Plus className="h-4 w-4" strokeWidth={2.5} />
-                Add Opportunity
-                <ArrowUpRight className="h-4 w-4" />
-              </Link>
             </div>
-            <div className="dashboard-quote-block">
-              <p className="dashboard-quote-label">Today&apos;s motivation</p>
+            <div className="dashboard-quote-block rounded-xl border border-slate-700/50 bg-slate-800/40 p-4 text-xs">
+              <p className="dashboard-quote-label">TODAY&apos;S MOTIVATION</p>
               <blockquote className="dashboard-quote-text text-slate-300 italic">
                 “{quote.text}”
               </blockquote>
@@ -545,72 +608,184 @@ export default function Dashboard() {
           </div>
         </section>
 
-        <section className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="mb-3 flex flex-wrap items-center gap-3">
-              <span className="dashboard-eyebrow">Opportunity Tracker</span>
-              <span className="dashboard-active-pill">
-                <Circle className="h-2.5 w-2.5 fill-current" />
-                {statsLoading ? "Loading active total" : `${activeOpportunityCount} active`}
-              </span>
-            </div>
-            <h1 className="m-0 font-sans text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Melizza&apos;s Workspace
-            </h1>
-            <p className="mt-2 text-sm font-medium tracking-wide text-slate-200 sm:text-base">
-              Active Pipeline &amp; Opportunities
-            </p>
-          </div>
-
-          <div className="flex items-center justify-end">
-            <button
-              onClick={handleTestAlert}
-              disabled={testTelegram.isPending}
-              className="dashboard-ghost-icon-button"
-              aria-label="Send test Telegram alert"
-              title="Send test Telegram alert"
-            >
-              {testTelegram.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </button>
-          </div>
-        </section>
-
-        <div className="flex justify-end">
-          <div
-            className="dashboard-view-toggle"
-            role="tablist"
-            aria-label="Choose dashboard view"
-          >
-            {VIEW_MODES.map(({ value, label, icon: Icon }) => {
-              const active = viewMode === value;
-
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  aria-controls={`dashboard-view-${value}`}
-                  className={`dashboard-view-button ${
-                    active
-                      ? "is-active bg-indigo-600 text-white"
-                      : "text-slate-400 hover:text-white"
-                  }`}
-                  onClick={() => setViewMode(value)}
-                  data-testid={`button-view-${value}`}
+        <div className="dashboard-main-view" key={viewMode}>
+          {viewMode === "analytics" && (
+            <>
+              <div className="dashboard-pipeline-heading dashboard-analytics-heading">
+                <div>
+                  <h2 className="dashboard-pipeline-title">Your Pipeline</h2>
+                  <p className="dashboard-pipeline-subtitle">Analytics</p>
+                </div>
+                {renderViewSwitcher()}
+              </div>
+              <section
+                id="dashboard-view-analytics"
+                className="dashboard-breakdown-section rounded-2xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-xl"
+                aria-labelledby="productivity-breakdown-title"
+              >
+              <div className="dashboard-breakdown-heading">
+                <div>
+                  <p className="dashboard-section-kicker">Productivity tracking</p>
+                  <h2 id="productivity-breakdown-title" className="dashboard-section-title">
+                    Productivity &amp; Pipeline Breakdown
+                  </h2>
+                  <p className="dashboard-breakdown-copy">
+                    See where each opportunity category sits in your pipeline.
+                  </p>
+                </div>
+                <div
+                  className="dashboard-category-filter-row flex gap-2 overflow-x-auto pb-2 scrollbar-none"
+                  role="toolbar"
+                  aria-label="Filter analytics by category"
                 >
-                  <Icon className="h-3.5 w-3.5" />
-                  <span>{label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+                  <button
+                    type="button"
+                    className={`dashboard-category-filter ${
+                      categoryFilter === "all"
+                        ? "is-active bg-indigo-600 text-white"
+                        : "bg-slate-800/60 text-slate-400 hover:text-white border border-slate-700/50"
+                    }`}
+                    onClick={() => setCategoryFilter("all")}
+                    aria-pressed={categoryFilter === "all"}
+                    data-testid="button-category-filter-all"
+                  >
+                    All
+                  </button>
+                  {CATEGORY_OPTIONS.map(({ value, label, icon: Icon }) => {
+                    const active = categoryFilter === value;
+                    return (
+                      <button
+                        type="button"
+                        className={`dashboard-category-filter ${
+                          active
+                            ? "is-active bg-indigo-600 text-white"
+                            : "bg-slate-800/60 text-slate-400 hover:text-white border border-slate-700/50"
+                        }`}
+                        key={value}
+                        onClick={() => setCategoryFilter(value)}
+                        aria-pressed={active}
+                        data-testid={`button-category-filter-${value}`}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
+              {allOpportunitiesLoading ? (
+                <div className="dashboard-breakdown-loading" aria-label="Loading productivity breakdown">
+                  <div />
+                  <div />
+                  <div />
+                  <div />
+                </div>
+              ) : (
+                <>
+                  <table className="dashboard-breakdown-desktop-table hidden w-full md:table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Category</th>
+                        {BREAKDOWN_STAGES.map((stage) => (
+                          <th scope="col" key={stage.label} title={"description" in stage ? stage.description : ""}>
+                            {stage.label}
+                          </th>
+                        ))}
+                        <th scope="col">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analyticsRows.map(({ value, label, icon: Icon, counts, total }) => (
+                        <tr
+                          className="dashboard-breakdown-row border-b border-slate-800/60 transition-colors hover:bg-slate-800/30"
+                          key={value}
+                        >
+                          <th scope="row" className="dashboard-breakdown-category-cell">
+                            <span className="dashboard-breakdown-category-button">
+                              <Icon className="h-4 w-4" />
+                              <span>{label}</span>
+                            </span>
+                          </th>
+                          {counts.map((count, index) => (
+                            <td
+                              className={`dashboard-breakdown-number ${getBreakdownNumberClass(count)}`}
+                              key={`${value}-${BREAKDOWN_STAGES[index]?.label}`}
+                              aria-label={`${count} ${label} opportunities in ${BREAKDOWN_STAGES[index]?.label}`}
+                            >
+                              {count}
+                            </td>
+                          ))}
+                          <td
+                            className={`dashboard-breakdown-total-cell ${getBreakdownNumberClass(total)}`}
+                          >
+                            {total}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  <div className="dashboard-breakdown-mobile-cards block md:hidden">
+                    {analyticsRows.map(({ value, label, icon: Icon, counts, total }) => {
+                      const activeStageTotal = counts
+                        .slice(0, 3)
+                        .reduce((sum, count) => sum + count, 0);
+                      const progressColors = [
+                        "dashboard-progress-amber",
+                        "dashboard-progress-blue",
+                        "dashboard-progress-green",
+                      ];
+                      const progressLabels = ["To Apply", "Applied", "Interviewing"];
+
+                      return (
+                        <article
+                          className="dashboard-breakdown-mobile-card bg-slate-900/70 border border-slate-800 rounded-xl p-4 mb-3"
+                          key={value}
+                        >
+                          <div className="dashboard-breakdown-mobile-header">
+                            <span className="dashboard-breakdown-mobile-title">
+                              <Icon className="h-4 w-4" />
+                              {label}
+                            </span>
+                            <span className="dashboard-breakdown-total-badge">{total}</span>
+                          </div>
+                          <div
+                            className="dashboard-breakdown-progress"
+                            role="img"
+                            aria-label={`${counts[0]} To Apply, ${counts[1]} Applied, ${counts[2]} Interviewing`}
+                          >
+                            {counts.slice(0, 3).map((count, index) => (
+                              <span
+                                className={`dashboard-breakdown-progress-segment ${progressColors[index]} ${count === 0 ? "is-empty" : ""}`}
+                                key={progressLabels[index]}
+                                style={{
+                                  width: `${activeStageTotal > 0 ? (count / activeStageTotal) * 100 : 33.333}%`,
+                                }}
+                              />
+                            ))}
+                          </div>
+                          <div className="dashboard-breakdown-mobile-footer">
+                            {counts.slice(0, 3).map((count, index) => (
+                              <span key={progressLabels[index]}>
+                                <strong className={getBreakdownNumberClass(count)}>{count}</strong>{" "}
+                                {progressLabels[index]}
+                                {index < 2 ? " •" : ""}
+                              </span>
+                            ))}
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+              </section>
+            </>
+          )}
+
+          {viewMode !== "analytics" && (
+            <>
         {statsLoading ? (
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             {[1, 2, 3, 4].map((item) => (
@@ -627,9 +802,6 @@ export default function Dashboard() {
             <div className={`dashboard-stat-card dashboard-stat-card-warm ${stats.closingSoon > 0 ? "is-alert" : "is-zero"}`}>
               <div className="dashboard-stat-heading">
                 <span className="dashboard-stat-label">Closing soon</span>
-                {stats.closingSoon > 0 && (
-                  <span className="dashboard-stat-accent-badge dashboard-stat-accent-badge-amber">Attention</span>
-                )}
               </div>
               <strong className="dashboard-stat-value">{stats.closingSoon}</strong>
               <span className="dashboard-stat-note">Needs attention this week</span>
@@ -637,7 +809,6 @@ export default function Dashboard() {
             <div className="dashboard-stat-card dashboard-stat-card-indigo">
               <div className="dashboard-stat-heading">
                 <span className="dashboard-stat-label">To apply</span>
-                <span className="dashboard-stat-accent-badge dashboard-stat-accent-badge-indigo">Focus</span>
               </div>
               <strong className="dashboard-stat-value">{stats.byStatus["to-apply"]}</strong>
               <span className="dashboard-stat-note">Ready for your next move</span>
@@ -645,7 +816,6 @@ export default function Dashboard() {
             <div className="dashboard-stat-card dashboard-stat-card-emerald">
               <div className="dashboard-stat-heading">
                 <span className="dashboard-stat-label">Interviewing</span>
-                <span className="dashboard-stat-accent-badge dashboard-stat-accent-badge-emerald">In motion</span>
               </div>
               <strong className="dashboard-stat-value">{stats.byStatus.interviewing}</strong>
               <span className="dashboard-stat-note">Keep the momentum going</span>
@@ -653,210 +823,36 @@ export default function Dashboard() {
           </div>
         ) : null}
 
-        <section
-          className="dashboard-breakdown-section"
-          aria-labelledby="productivity-breakdown-title"
-        >
-          <div className="dashboard-breakdown-heading">
+        <section className="space-y-5">
+          <div className="dashboard-pipeline-heading">
             <div>
-              <p className="dashboard-section-kicker">Productivity tracking</p>
-              <h2 id="productivity-breakdown-title" className="dashboard-section-title">
-                Productivity &amp; Pipeline Breakdown
-              </h2>
-              <p className="dashboard-breakdown-copy">
-                See where each opportunity category sits in your pipeline.
-              </p>
+              <h2 className="dashboard-pipeline-title">Your Pipeline</h2>
+              <p className="dashboard-pipeline-subtitle">Active opportunities in motion</p>
             </div>
-            <div
-              className="dashboard-category-filter-row flex gap-2 overflow-x-auto pb-2 scrollbar-none"
-              role="toolbar"
-              aria-label="Filter opportunities by category"
-            >
-              <button
-                type="button"
-                className={`dashboard-category-filter ${
-                  categoryFilter === "all"
-                    ? "is-active bg-indigo-600 text-white"
-                    : "bg-slate-800/60 text-slate-400 hover:text-white border border-slate-700/50"
-                }`}
-                onClick={() => setCategoryFilter("all")}
-                aria-pressed={categoryFilter === "all"}
-                data-testid="button-category-filter-all"
+            <div className="dashboard-pipeline-controls">
+              {renderViewSwitcher()}
+              <div
+                className="dashboard-filter-bar"
+                role="tablist"
+                aria-label="Filter opportunities by status"
               >
-                All categories
-              </button>
-              {CATEGORY_OPTIONS.map(({ value, label, icon: Icon }) => {
-                const active = categoryFilter === value;
-                return (
-                  <button
-                    type="button"
-                    className={`dashboard-category-filter ${
-                      active
-                        ? "is-active bg-indigo-600 text-white"
-                        : "bg-slate-800/60 text-slate-400 hover:text-white border border-slate-700/50"
-                    }`}
-                    key={value}
-                    onClick={() => setCategoryFilter(value)}
-                    aria-pressed={active}
-                    data-testid={`button-category-filter-${value}`}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {allOpportunitiesLoading ? (
-            <div className="dashboard-breakdown-loading" aria-label="Loading productivity breakdown">
-              <div />
-              <div />
-              <div />
-              <div />
-            </div>
-          ) : (
-            <>
-              <table className="dashboard-breakdown-desktop-table hidden w-full md:table">
-                <thead>
-                  <tr>
-                    <th scope="col">Category</th>
-                    {BREAKDOWN_STAGES.map((stage) => (
-                      <th scope="col" key={stage.label} title={"description" in stage ? stage.description : ""}>
-                        {stage.label}
-                      </th>
-                    ))}
-                    <th scope="col">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {breakdownRows.map(({ value, label, icon: Icon, counts, total }) => (
-                    <tr
-                      className="dashboard-breakdown-row border-b border-slate-800/60 transition-colors hover:bg-slate-800/30"
-                      key={value}
-                    >
-                      <th scope="row" className="dashboard-breakdown-category-cell">
-                        <button
-                          type="button"
-                          className={`dashboard-breakdown-category-button ${categoryFilter === value ? "is-active" : ""}`}
-                          onClick={() => setCategoryFilter(value)}
-                          aria-pressed={categoryFilter === value}
-                          data-testid={`button-breakdown-category-${value}`}
-                        >
-                          <Icon className="h-4 w-4" />
-                          <span>{label}</span>
-                        </button>
-                      </th>
-                      {counts.map((count, index) => (
-                        <td
-                          className={`dashboard-breakdown-number ${getBreakdownNumberClass(count)}`}
-                          key={`${value}-${BREAKDOWN_STAGES[index]?.label}`}
-                          aria-label={`${count} ${label} opportunities in ${BREAKDOWN_STAGES[index]?.label}`}
-                        >
-                          {count}
-                        </td>
-                      ))}
-                      <td
-                        className={`dashboard-breakdown-total-cell ${getBreakdownNumberClass(total)}`}
-                      >
-                        {total}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <div className="dashboard-breakdown-mobile-cards block md:hidden">
-                {breakdownRows.map(({ value, label, icon: Icon, counts, total }) => {
-                  const activeStageTotal = counts
-                    .slice(0, 3)
-                    .reduce((sum, count) => sum + count, 0);
-                  const progressColors = [
-                    "dashboard-progress-amber",
-                    "dashboard-progress-blue",
-                    "dashboard-progress-green",
-                  ];
-                  const progressLabels = ["To Apply", "Applied", "Interviewing"];
-
+                {FILTERS.map(({ value, label }) => {
+                  const active = statusFilter === value;
                   return (
-                    <article
-                      className="dashboard-breakdown-mobile-card bg-slate-900/70 border border-slate-800 rounded-xl p-4 mb-3"
+                    <button
                       key={value}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setStatusFilter(value)}
+                      className={`dashboard-filter-button ${active ? "is-active" : ""}`}
+                      data-testid={`button-filter-${value}`}
                     >
-                      <button
-                        type="button"
-                        className={`dashboard-breakdown-mobile-header ${categoryFilter === value ? "is-active" : ""}`}
-                        onClick={() => setCategoryFilter(value)}
-                        aria-pressed={categoryFilter === value}
-                        data-testid={`button-mobile-breakdown-category-${value}`}
-                      >
-                        <span className="dashboard-breakdown-mobile-title">
-                          <Icon className="h-4 w-4" />
-                          {label}
-                        </span>
-                        <span className="dashboard-breakdown-total-badge">{total}</span>
-                      </button>
-                      <div
-                        className="dashboard-breakdown-progress"
-                        role="img"
-                        aria-label={`${counts[0]} To Apply, ${counts[1]} Applied, ${counts[2]} Interviewing`}
-                      >
-                        {counts.slice(0, 3).map((count, index) => (
-                          <span
-                            className={`dashboard-breakdown-progress-segment ${progressColors[index]} ${count === 0 ? "is-empty" : ""}`}
-                            key={progressLabels[index]}
-                            style={{
-                              width: `${activeStageTotal > 0 ? (count / activeStageTotal) * 100 : 33.333}%`,
-                            }}
-                          />
-                        ))}
-                      </div>
-                      <div className="dashboard-breakdown-mobile-footer">
-                        {counts.slice(0, 3).map((count, index) => (
-                          <span key={progressLabels[index]}>
-                            <strong className={getBreakdownNumberClass(count)}>{count}</strong>{" "}
-                            {progressLabels[index]}
-                            {index < 2 ? " •" : ""}
-                          </span>
-                        ))}
-                      </div>
-                    </article>
+                      {label}
+                    </button>
                   );
                 })}
               </div>
-            </>
-          )}
-        </section>
-
-        <section className="space-y-5">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="dashboard-section-kicker">Your pipeline</p>
-              <h2 className="dashboard-section-title">
-                {viewMode === "calendar"
-                  ? "Deadlines in view"
-                  : viewMode === "kanban"
-                    ? "Pipeline by stage"
-                    : "Opportunities in motion"}
-              </h2>
-            </div>
-            <div className="dashboard-filter-bar" role="tablist" aria-label="Filter opportunities by status">
-              {FILTERS.map(({ value, label }) => {
-                const active = statusFilter === value;
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => setStatusFilter(value)}
-                    className={`dashboard-filter-button ${active ? "is-active" : ""}`}
-                    data-testid={`button-filter-${value}`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
             </div>
           </div>
 
@@ -898,6 +894,9 @@ export default function Dashboard() {
             </div>
           )}
         </section>
+            </>
+          )}
+        </div>
       </div>
 
       <Dialog

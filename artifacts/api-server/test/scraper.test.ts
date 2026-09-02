@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   cleanupTitle,
   cleanSummary,
+  detectActionPlanTasks,
   parseScrapedHtml,
   resolveOpportunityTitle,
 } from "../src/lib/scraper.ts";
@@ -13,6 +14,30 @@ async function fixture(name: string): Promise<string> {
 }
 
 describe("scraper metadata fallbacks", () => {
+  it("maps common submission deliverables to Action Plan tasks", () => {
+    const tasks = detectActionPlanTasks(
+      "Resume/CV, cover letter, personal statement, audition video, " +
+        "headshot and portfolio, references, proposal essay, demo, and code sample.",
+    );
+
+    assert.deepEqual(tasks, [
+      "Update and tailor CV/Resume",
+      "Draft cover letter / application statement",
+      "Record & submit video reel / audition recording",
+      "Prepare high-res headshot / portfolio links",
+      "Gather professional reference contacts",
+      "Draft project proposal / essay response",
+      "Prepare project demo or code sample",
+    ]);
+  });
+
+  it("returns an empty Action Plan when no deliverables are mentioned", () => {
+    assert.deepEqual(
+      detectActionPlanTasks("Applications are open until the deadline."),
+      [],
+    );
+  });
+
   it("detects singing competitions from page titles and text", () => {
     const result = parseScrapedHtml(
       "https://opportunities.example.org/open-call",

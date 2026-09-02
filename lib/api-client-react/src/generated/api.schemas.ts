@@ -123,6 +123,11 @@ export interface OpportunityInput {
   deadline?: string;
   summary?: string;
   keyActionSteps?: string;
+  /**
+     * @maxItems 20
+     * @items.minLength 1
+     */
+  actionPlanTasks?: string[];
 }
 
 export type OpportunityPatchType = typeof OpportunityPatchType[keyof typeof OpportunityPatchType];
@@ -187,6 +192,7 @@ export interface ScrapedData {
   summary?: string | null;
   /** @nullable */
   keyActionSteps?: string | null;
+  actionPlanTasks?: string[];
   type: ScrapedDataType;
   scrapeSuccess?: boolean;
 }

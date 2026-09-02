@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import express, { type Express } from "express";
 import { eq } from "drizzle-orm";
-import { db, opportunitiesTable } from "../src/db/index.ts";
+import { db, opportunitiesTable, tasksTable } from "../src/db/index.ts";
 import { createOpportunitiesRouter } from "../src/routes/opportunities.ts";
 import { createTelegramWebhookRouter } from "../src/routes/telegram-webhook.ts";
 import { parseScrapedHtml } from "../src/lib/scraper.ts";
@@ -84,6 +84,80 @@ afterEach(async () => {
 });
 
 describe("save-flow metadata wiring", () => {
+  it("creates detected Action Plan tasks with the new opportunity", async () => {
+    const app = authenticatedApp(createOpportunitiesRouter());
+
+    await withServer(app, async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/opportunities`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: "https://opportunities.example.org/action-plan-test",
+          title: "Action Plan Test",
+          type: "job",
+          status: "to-apply",
+          actionPlanTasks: [
+            "Update and tailor CV/Resume",
+            "Prepare project demo or code sample",
+          ],
+        }),
+      });
+      const created = (await response.json()) as { id: number; taskCount: number };
+
+      assert.equal(response.status, 201);
+      assert.equal(created.taskCount, 2);
+
+      const tasks = await db
+        .select({ title: tasksTable.title, completed: tasksTable.completed })
+        .from(tasksTable)
+        .where(eq(tasksTable.opportunityId, created.id));
+      assert.deepEqual(tasks, [
+        { title: "Update and tailor CV/Resume", completed: false },
+        { title: "Prepare project demo or code sample", completed: false },
+      ]);
+
+      await db
+        .delete(opportunitiesTable)
+        .where(eq(opportunitiesTable.id, created.id));
+    });
+  });
+
+  it("creates category fallback tasks when no deliverables are supplied", async () => {
+    const app = authenticatedApp(createOpportunitiesRouter());
+
+    await withServer(app, async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/opportunities`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: "https://opportunities.example.org/fallback-test",
+          title: "Fallback Test",
+          type: "grant",
+          status: "to-apply",
+          actionPlanTasks: [],
+        }),
+      });
+      const created = (await response.json()) as { id: number; taskCount: number };
+
+      assert.equal(response.status, 201);
+      assert.equal(created.taskCount, 3);
+
+      const tasks = await db
+        .select({ title: tasksTable.title, completed: tasksTable.completed })
+        .from(tasksTable)
+        .where(eq(tasksTable.opportunityId, created.id));
+      assert.deepEqual(tasks, [
+        { title: "Review Eligibility Criteria", completed: false },
+        { title: "Draft Grant Proposal", completed: false },
+        { title: "Submit Budget Breakdown", completed: false },
+      ]);
+
+      await db
+        .delete(opportunitiesTable)
+        .where(eq(opportunitiesTable.id, created.id));
+    });
+  });
+
   it("returns normalized provider titles and blank boilerplate summaries from the add-form scrape endpoint", async () => {
     const cases = [
       ["linkedin-generic.html", "LinkedIn Job 123456789"],

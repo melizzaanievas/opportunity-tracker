@@ -12,6 +12,7 @@ import {
   ScrapeOpportunityUrlBody,
 } from "@workspace/api-zod";
 import { scrapeUrl, UnsafeScrapeUrlError } from "../lib/scraper";
+import { insertInitialActionPlanTasks } from "../lib/action-plan";
 
 export function createOpportunitiesRouter(
   dependencies: { scrapeUrl?: typeof scrapeUrl } = {},
@@ -87,7 +88,13 @@ export function createOpportunitiesRouter(
         })
         .returning();
 
-      res.status(201).json({ ...opp, taskCount: 0, completedTaskCount: 0 });
+      const taskCount = await insertInitialActionPlanTasks(
+        opp.id,
+        parsed.data.type,
+        parsed.data.actionPlanTasks,
+      );
+
+      res.status(201).json({ ...opp, taskCount, completedTaskCount: 0 });
     },
   );
 

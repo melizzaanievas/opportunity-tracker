@@ -7,6 +7,7 @@ import {
   scrapeUrl,
   validateScrapeUrl,
 } from "../lib/scraper";
+import { insertInitialActionPlanTasks } from "../lib/action-plan";
 import { logger } from "../lib/logger";
 import { buildGoogleCalendarUrl } from "../lib/google-calendar-link";
 import {
@@ -296,6 +297,11 @@ export function createTelegramWebhookRouter(
           title: opportunitiesTable.title,
           deadline: opportunitiesTable.deadline,
         });
+      await insertInitialActionPlanTasks(
+        inserted.id,
+        scraped.type,
+        scraped.actionPlanTasks,
+      );
 
       logger.info(
         { id: inserted.id, title: inserted.title },
