@@ -12,7 +12,12 @@ import * as zod from 'zod';
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
-  "status": zod.string()
+  "status": zod.string(),
+  "telegramWebhook": zod.object({
+  "status": zod.enum(['pending', 'successful', 'failed']),
+  "webhookUrl": zod.string().nullable(),
+  "description": zod.string().nullable()
+})
 })
 
 

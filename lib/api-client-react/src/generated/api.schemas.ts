@@ -5,8 +5,26 @@
  * Opportunity Tracker API specification
  * OpenAPI spec version: 0.1.0
  */
+export type HealthStatusTelegramWebhookStatus = typeof HealthStatusTelegramWebhookStatus[keyof typeof HealthStatusTelegramWebhookStatus];
+
+
+export const HealthStatusTelegramWebhookStatus = {
+  pending: 'pending',
+  successful: 'successful',
+  failed: 'failed',
+} as const;
+
+export type HealthStatusTelegramWebhook = {
+  status: HealthStatusTelegramWebhookStatus;
+  /** @nullable */
+  webhookUrl: string | null;
+  /** @nullable */
+  description: string | null;
+};
+
 export interface HealthStatus {
   status: string;
+  telegramWebhook: HealthStatusTelegramWebhook;
 }
 
 export interface ErrorResponse {

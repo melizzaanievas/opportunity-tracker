@@ -5,7 +5,9 @@
  * Opportunity Tracker API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { HealthStatusTelegramWebhook } from './healthStatusTelegramWebhook';
 
 export interface HealthStatus {
   status: string;
+  telegramWebhook: HealthStatusTelegramWebhook;
 }

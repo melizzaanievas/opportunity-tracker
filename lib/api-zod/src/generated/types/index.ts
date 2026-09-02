@@ -14,6 +14,8 @@ export * from './dashboardStatsByType';
 export * from './errorResponse';
 export * from './googleOAuthCallbackParams';
 export * from './healthStatus';
+export * from './healthStatusTelegramWebhook';
+export * from './healthStatusTelegramWebhookStatus';
 export * from './listOpportunitiesParams';
 export * from './listOpportunitiesStatus';
 export * from './listOpportunitiesType';

@@ -521,10 +521,21 @@ components:
   schemas:
     HealthStatus:
       type: object
-      required: [status]
+      required: [status, telegramWebhook]
       properties:
         status:
           type: string
+        telegramWebhook:
+          type: object
+          required: [status, webhookUrl, description]
+          properties:
+            status:
+              type: string
+              enum: [pending, successful, failed]
+            webhookUrl:
+              type: ["string", "null"]
+            description:
+              type: ["string", "null"]
 
     ErrorResponse:
       type: object
