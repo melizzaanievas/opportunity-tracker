@@ -7,9 +7,24 @@ const TELEGRAM_API = "https://api.telegram.org";
 const LOCAL_TELEGRAM_WEBHOOK_SECRET = "local-development-webhook-secret";
 
 /**
+ * Default search terms for automated daily scouting.
+ */
+export const DEFAULT_SCOUT_QUERIES = [
+  "Web3 Marketing Lead",
+  "Blockchain Ecosystem Development",
+  "Government Relations",
+  "Public Policy",
+  "APAC GTM",
+  "Web3 GTM",
+  "GTM Lead",
+  "Policy Fellowship",
+  "United Nations",
+  "Web3 Growth Director",
+  "AI Fellowship 2026",
+];
+
+/**
  * Keep local webhook checks usable without weakening production validation.
- * The development server and test runner use a stable process-local fallback;
- * deployed production instances must provide the real secret explicitly.
  */
 export function getTelegramWebhookSecret(): string | undefined {
   const configuredSecret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
@@ -73,6 +88,7 @@ export async function sendTelegramMessage(text: string): Promise<boolean> {
       chat_id: chatId,
       text,
       parse_mode: "HTML",
+      disable_web_page_preview: true,
     })) !== null
   );
 }
@@ -91,6 +107,7 @@ export async function sendScoutTelegramMessage(
     chat_id: chatId,
     text,
     parse_mode: "HTML",
+    disable_web_page_preview: true,
     reply_markup: {
       inline_keyboard: [
         [
@@ -114,6 +131,7 @@ export async function editTelegramMessage(
       message_id: messageId,
       text,
       parse_mode: "HTML",
+      disable_web_page_preview: true,
       reply_markup: { inline_keyboard: [] },
     })) !== null
   );
@@ -176,7 +194,7 @@ export async function buildDailySummary(): Promise<{ text: string; count: number
       url: opp.url,
     });
     const calendarLink = `<a href="${googleCalUrl}">📅 Add to Google Calendar</a>`;
-    return `${urgency} <b>${opp.title}</b>\n   📅 ${deadline}${daysText} | 📌 ${opp.type} | ${opp.status}\n   🔗 ${opp.url}\n   ${calendarLink}`;
+    return `${urgency} <b>${escapeTelegramHtml(opp.title)}</b>\n   📅 ${deadline}${daysText} | 📌 ${escapeTelegramHtml(opp.type)} | ${escapeTelegramHtml(opp.status)}\n   🔗 ${opp.url}\n   ${calendarLink}`;
   });
 
   const text = `🎯 <b>Opportunity Tracker Daily Digest</b>\n<i>${closing.length} deadline(s) in the next 7 days</i>\n\n${lines.join("\n\n")}`;
