@@ -1,8 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useLogout, useGetAuthMe } from "@workspace/api-client-react";
-import { Loader2, Plus, Zap, LogOut } from "lucide-react";
+import { Loader2, Zap, LogOut } from "lucide-react";
 
-const serif = "'Cormorant Garamond', Georgia, serif";
 const sans  = "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -68,29 +67,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </Link>
 
           <div className="flex items-center gap-2">
-
-            {/* + New button — sans-serif, bold */}
-            <Link href="/add">
-              <button
-                className="flex items-center gap-1.5 transition-all duration-200"
-                style={{
-                  fontFamily: sans,
-                  fontSize: "0.75rem",
-                  fontWeight: 700,
-                  letterSpacing: "0.07em",
-                  padding: "7px 16px",
-                  borderRadius: "999px",
-                  background: "rgba(255,255,255,0.07)",
-                  border: "1px solid rgba(243,229,171,0.5)",
-                  color: "#F3E5AB",
-                  boxShadow: "0 0 10px rgba(243,229,171,0.18)",
-                  cursor: "pointer",
-                }}
-              >
-                <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
-                NEW
-              </button>
-            </Link>
 
             <div className="h-4 w-px hidden sm:block" style={{ background: "rgba(230,220,255,0.15)" }} />
 

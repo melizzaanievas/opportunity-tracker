@@ -10,7 +10,6 @@ import {
 import { AppLayout } from "@/components/layout";
 import { useToast } from "@/hooks/use-toast";
 import {
-  AlertCircle,
   ArrowUpRight,
   Banknote,
   Briefcase,
@@ -23,9 +22,6 @@ import {
   Plus,
   Send,
 } from "lucide-react";
-
-const serif = "'Cormorant Garamond', Georgia, serif";
-const sans = "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif";
 
 const TYPE_ICONS = {
   job: Briefcase,
@@ -151,13 +147,10 @@ export default function Dashboard() {
                 {statsLoading ? "Loading active total" : `${activeOpportunityCount} active`}
               </span>
             </div>
-            <h1
-              className="m-0 text-4xl font-bold tracking-tight sm:text-5xl"
-              style={{ fontFamily: serif }}
-            >
+            <h1 className="m-0 font-sans text-3xl font-bold tracking-tight text-white sm:text-4xl">
               Melizza&apos;s Workspace
             </h1>
-            <p className="mt-2 text-sm font-medium tracking-wide text-slate-200/85 sm:text-base">
+            <p className="mt-2 text-sm font-medium tracking-wide text-slate-200 sm:text-base">
               Active Pipeline &amp; Opportunities
             </p>
           </div>
@@ -184,8 +177,8 @@ export default function Dashboard() {
         </section>
 
         {statsLoading ? (
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-            {[1, 2, 3, 4, 5].map((item) => (
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((item) => (
               <div key={item} className="dashboard-stat-card h-28 animate-pulse" />
             ))}
           </div>
@@ -196,26 +189,31 @@ export default function Dashboard() {
               <strong className="dashboard-stat-value">{stats.total}</strong>
               <span className="dashboard-stat-note">Across every stage</span>
             </div>
-            <div className="dashboard-stat-card dashboard-stat-card-warm">
-              <AlertCircle className="dashboard-stat-watermark" />
-              <span className="dashboard-stat-label">Closing soon</span>
+            <div className={`dashboard-stat-card dashboard-stat-card-warm ${stats.closingSoon > 0 ? "is-alert" : "is-zero"}`}>
+              <div className="dashboard-stat-heading">
+                <span className="dashboard-stat-label">Closing soon</span>
+                {stats.closingSoon > 0 && (
+                  <span className="dashboard-stat-accent-badge dashboard-stat-accent-badge-amber">Attention</span>
+                )}
+              </div>
               <strong className="dashboard-stat-value">{stats.closingSoon}</strong>
               <span className="dashboard-stat-note">Needs attention this week</span>
             </div>
             <div className="dashboard-stat-card dashboard-stat-card-indigo">
-              <span className="dashboard-stat-label">To apply</span>
+              <div className="dashboard-stat-heading">
+                <span className="dashboard-stat-label">To apply</span>
+                <span className="dashboard-stat-accent-badge dashboard-stat-accent-badge-indigo">Focus</span>
+              </div>
               <strong className="dashboard-stat-value">{stats.byStatus["to-apply"]}</strong>
               <span className="dashboard-stat-note">Ready for your next move</span>
             </div>
-            <div className="dashboard-stat-card dashboard-stat-card-indigo">
-              <span className="dashboard-stat-label">Interviewing</span>
+            <div className="dashboard-stat-card dashboard-stat-card-emerald">
+              <div className="dashboard-stat-heading">
+                <span className="dashboard-stat-label">Interviewing</span>
+                <span className="dashboard-stat-accent-badge dashboard-stat-accent-badge-emerald">In motion</span>
+              </div>
               <strong className="dashboard-stat-value">{stats.byStatus.interviewing}</strong>
               <span className="dashboard-stat-note">Keep the momentum going</span>
-            </div>
-            <div className="dashboard-stat-card dashboard-stat-card-green">
-              <span className="dashboard-stat-label">Completed</span>
-              <strong className="dashboard-stat-value">{stats.byStatus.completed}</strong>
-              <span className="dashboard-stat-note">Closed out successfully</span>
             </div>
           </div>
         ) : null}
