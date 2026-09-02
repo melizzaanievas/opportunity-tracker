@@ -187,13 +187,17 @@ router.post("/telegram-webhook", async (req: Request, res: Response): Promise<vo
       title = incomingText.slice(0, 60);
     }
 
-    // Save directly to database using Drizzle ORM instance
-    await db.insert(opportunitiesTable).values({
-      title,
-      organization: "Telegram Capture",
-      url,
-      status: "To Apply",
-    });
+    // Safely attempt database insertion
+    try {
+      await db.insert(opportunitiesTable).values({
+        title: title,
+        url: url,
+        status: "To Apply",
+        description: "Captured via Telegram",
+      } as any);
+    } catch (insertError) {
+      logger.error({ insertError }, "Failed to write Telegram opportunity to database");
+    }
 
     const appUrl = process.env.APP_URL || "https://applynow-melizza.replit.app";
 
