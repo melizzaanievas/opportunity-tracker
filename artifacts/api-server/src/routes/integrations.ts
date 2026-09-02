@@ -4,8 +4,10 @@ import { db, opportunitiesTable } from "../db";
 import { requireAuth } from "../middlewares/auth";
 import {
   AddToCalendarParams,
+  GoogleOAuthCallbackQueryParams,
 } from "@workspace/api-zod";
 import {
+  generateOAuthState,
   getAuthUrl,
   getStoredToken,
   createCalendarEvent,
@@ -24,10 +26,11 @@ router.post("/opportunities/:id/calendar", requireAuth, async (req, res): Promis
     return;
   }
 
-        const [opp] = await db
-          .select()
-          .from(opportunitiesTable)
-          .where(eq(opportunitiesTable.id, oppId));
+  const opportunityId = params.data.id;
+  const [opp] = await db
+    .select()
+    .from(opportunitiesTable)
+    .where(eq(opportunitiesTable.id, opportunityId));
 
   if (!opp) {
     res.status(404).json({ error: "Opportunity not found" });
@@ -42,7 +45,26 @@ router.post("/opportunities/:id/calendar", requireAuth, async (req, res): Promis
   // Check if we have a stored token
   const token = await getStoredToken();
   if (!token) {
-    const authUrl = getAuthUrl(params.data.id);
+    const state = generateOAuthState();
+    const authUrl = getAuthUrl(state);
+    req.session.googleOAuthState = { value: state, opportunityId };
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve();
+        });
+      });
+    } catch (err) {
+      req.log.error({ err }, "Failed to save Google OAuth session state");
+      res.status(500).json({ error: "Session error" });
+      return;
+    }
+
     res.json({ success: false, authUrl, message: null });
     return;
   }
@@ -58,9 +80,29 @@ router.post("/opportunities/:id/calendar", requireAuth, async (req, res): Promis
 });
 
 // Google OAuth callback
-router.get("/integrations/google/callback", async (req, res): Promise<void> => {
-  const { code, state, error } = req.query as { code?: string; state?: string; error?: string };
+router.get("/integrations/google/callback", requireAuth, async (req, res): Promise<void> => {
+  const parsedQuery = GoogleOAuthCallbackQueryParams.safeParse(req.query);
+  if (!parsedQuery.success) {
+    req.log.warn("Invalid Google OAuth callback query");
+    res.redirect(`/?google_error=1`);
+    return;
+  }
 
+  const { code, state, error } = parsedQuery.data;
+  const pendingOAuthState = req.session.googleOAuthState;
+  if (
+    !pendingOAuthState ||
+    !state ||
+    state !== pendingOAuthState.value
+  ) {
+    req.log.warn("Invalid or missing Google OAuth state");
+    res.redirect(`/?google_error=1`);
+    return;
+  }
+
+  // OAuth states are single-use. Remove and persist the state before using
+  // the authorization code so a callback cannot be replayed.
+  delete req.session.googleOAuthState;
   if (error || !code) {
     req.log.warn({ error }, "Google OAuth error");
     res.redirect(`/?google_error=1`);
@@ -68,28 +110,32 @@ router.get("/integrations/google/callback", async (req, res): Promise<void> => {
   }
 
   try {
+    await new Promise<void>((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve();
+      });
+    });
+
     await exchangeCodeForToken(code);
     // After getting the token, create the calendar event for the original opportunity
-    if (state) {
-      const oppId = parseInt(state, 10);
-      if (!isNaN(oppId)) {
-        const [opp] = await db
-          .select()
-          .from(opportunitiesTable)
-          .where(eq(opportunitiesTable.id, oppId));
-        if (opp && opp.deadline) {
-          await createCalendarEvent({
-            title: opp.title,
-            deadline: opp.deadline,
-            summary: opp.summary,
-            url: opp.url,
-          });
-        }
-        res.redirect(`/opportunity/${oppId}?calendar_success=1`);
-        return;
-      }
+    const [opp] = await db
+      .select()
+      .from(opportunitiesTable)
+      .where(eq(opportunitiesTable.id, pendingOAuthState.opportunityId));
+    if (opp && opp.deadline) {
+      await createCalendarEvent({
+        title: opp.title,
+        deadline: opp.deadline,
+        summary: opp.summary,
+        url: opp.url,
+      });
     }
-    res.redirect(`/?calendar_success=1`);
+    res.redirect(`/opportunity/${pendingOAuthState.opportunityId}?calendar_success=1`);
+    return;
   } catch (err) {
     logger.error({ err }, "Google OAuth callback error");
     res.redirect(`/?google_error=1`);

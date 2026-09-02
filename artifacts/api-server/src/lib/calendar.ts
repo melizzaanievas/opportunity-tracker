@@ -1,4 +1,5 @@
 import { google } from "googleapis";
+import { randomBytes } from "node:crypto";
 import { logger } from "./logger";
 import { db, settingsTable } from "../db";
 import { eq } from "drizzle-orm";
@@ -30,12 +31,16 @@ export function createOAuth2Client() {
   return new google.auth.OAuth2(clientId, clientSecret, getRedirectUri());
 }
 
-export function getAuthUrl(opportunityId: number): string {
+export function generateOAuthState(): string {
+  return randomBytes(32).toString("hex");
+}
+
+export function getAuthUrl(state: string): string {
   const oauth2Client = createOAuth2Client();
   return oauth2Client.generateAuthUrl({
     access_type: "offline",
     scope: SCOPES,
-    state: String(opportunityId),
+    state,
     prompt: "consent",
   });
 }
