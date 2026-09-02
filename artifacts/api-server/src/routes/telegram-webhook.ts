@@ -16,6 +16,7 @@ import {
 } from "../lib/telegram";
 
 const URL_REGEX = /https?:\/\/[^\s<>"]+/i;
+const TELEGRAM_WEBHOOK_SECRET_HEADER = "x-telegram-bot-api-secret-token";
 
 interface TelegramUpdate {
   update_id: number;
@@ -40,6 +41,15 @@ type SendReply = (
   text: string,
   replyToMessageId?: number,
 ) => Promise<void>;
+
+type TelegramWebhookRequest = {
+  body: unknown;
+  headers?: Record<string, string | string[] | undefined>;
+};
+
+type TelegramWebhookResponse = {
+  sendStatus: (statusCode: number) => unknown;
+};
 
 interface TelegramWebhookDependencies {
   validateScrapeUrl?: typeof validateScrapeUrl;
@@ -211,9 +221,20 @@ export function createTelegramWebhookRouter(
   const reply = dependencies.sendReply ?? sendReply;
 
   async function handleTelegramUpdate(
-    req: { body: unknown },
-    res: { sendStatus: (statusCode: number) => unknown },
+    req: TelegramWebhookRequest,
+    res: TelegramWebhookResponse,
   ): Promise<void> {
+    const configuredWebhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+    const receivedWebhookSecret = req.headers?.[TELEGRAM_WEBHOOK_SECRET_HEADER];
+    if (
+      !configuredWebhookSecret ||
+      typeof receivedWebhookSecret !== "string" ||
+      receivedWebhookSecret !== configuredWebhookSecret
+    ) {
+      res.sendStatus(401);
+      return;
+    }
+
     // Always acknowledge immediately — Telegram retries on non-200.
     res.sendStatus(200);
 

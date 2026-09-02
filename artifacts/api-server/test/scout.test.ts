@@ -9,6 +9,7 @@ import { createTelegramWebhookRouter } from "../src/routes/telegram-webhook.ts";
 
 const TELEGRAM_CHAT_ID = "scout-test-chat";
 const TELEGRAM_BOT_TOKEN = "fake-scout-test-token";
+const TELEGRAM_WEBHOOK_SECRET = "scout-webhook-secret";
 const SCOUT_JOB_URL = "https://example.com/jobs/scout-123";
 
 type TelegramCall = {
@@ -59,10 +60,15 @@ async function postScoutCallback(
   callbackId: string,
   data: string,
   chatId: number | string = TELEGRAM_CHAT_ID,
+  webhookSecret: string | undefined = TELEGRAM_WEBHOOK_SECRET,
 ): Promise<void> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (webhookSecret) {
+    headers["X-Telegram-Bot-Api-Secret-Token"] = webhookSecret;
+  }
   const response = await fetch(`${baseUrl}/api/integrations/telegram-webhook`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({
       update_id: Number(callbackId.replace(/\D/g, "")) || 1,
       callback_query: {
@@ -87,11 +93,13 @@ beforeEach(async () => {
     .where(eq(opportunitiesTable.url, SCOUT_JOB_URL));
   process.env.TELEGRAM_CHAT_ID = TELEGRAM_CHAT_ID;
   process.env.TELEGRAM_BOT_TOKEN = TELEGRAM_BOT_TOKEN;
+  process.env.TELEGRAM_WEBHOOK_SECRET = TELEGRAM_WEBHOOK_SECRET;
 });
 
 afterEach(() => {
   delete process.env.TELEGRAM_CHAT_ID;
   delete process.env.TELEGRAM_BOT_TOKEN;
+  delete process.env.TELEGRAM_WEBHOOK_SECRET;
 });
 
 describe("job scout Telegram alerts", () => {
@@ -298,6 +306,7 @@ describe("job scout Telegram alerts", () => {
           "untrusted-chat-1",
           `add_opp:${job.id}`,
           "another-chat",
+          undefined,
         );
 
         const [jobAfterCallback] = await db

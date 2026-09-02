@@ -31,6 +31,7 @@ A private, password-protected full-stack web dashboard for tracking jobs, grants
 | `GOOGLE_CLIENT_SECRET` | Google OAuth 2.0 app client secret |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token from @BotFather |
 | `TELEGRAM_CHAT_ID` | Chat/channel ID for Telegram digests |
+| `TELEGRAM_WEBHOOK_SECRET` | Secret token Telegram sends with webhook requests |
 
 ## Google Calendar Setup
 

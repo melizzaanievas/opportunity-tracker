@@ -21,6 +21,12 @@ export async function registerTelegramWebhook(): Promise<void> {
     return;
   }
 
+  const secretToken = process.env.TELEGRAM_WEBHOOK_SECRET;
+  if (!secretToken) {
+    logger.warn("TELEGRAM_WEBHOOK_SECRET not set — skipping webhook registration");
+    return;
+  }
+
   const base = getPublicBaseUrl();
   if (!base) {
     logger.warn("Cannot determine public URL (REPLIT_DOMAINS/REPLIT_DEV_DOMAIN not set) — skipping webhook registration");
@@ -37,6 +43,7 @@ export async function registerTelegramWebhook(): Promise<void> {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           url: webhookUrl,
+          secret_token: secretToken,
           allowed_updates: ["message", "callback_query"],
           drop_pending_updates: false,
         }),

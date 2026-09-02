@@ -25,6 +25,7 @@ Add the following values to `.env` for local development or to Replit Secrets fo
 | `APP_PASSWORD` | Password protection for the web dashboard. |
 | `TELEGRAM_BOT_TOKEN` | Bot token from [@BotFather](https://t.me/BotFather). |
 | `TELEGRAM_CHAT_ID` | Your private Telegram Chat ID. |
+| `TELEGRAM_WEBHOOK_SECRET` | Secret token Telegram sends with webhook requests. |
 | `SESSION_SECRET` | Express session signing key. |
 | `SCOUT_CRON_SECRET` | Optional secret for external `POST /api/cron/scout` triggers. |
 
@@ -48,7 +49,7 @@ Create a new Replit app from your GitHub repository. Replit will detect the proj
 
 ### Configure secrets
 
-Open the Replit Secrets panel and add `APP_PASSWORD`, `TELEGRAM_BOT_TOKEN`, and `TELEGRAM_CHAT_ID`. Add `SCOUT_CRON_SECRET` if an external scheduler will call the scout endpoint.
+Open the Replit Secrets panel and add `APP_PASSWORD`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, and `TELEGRAM_WEBHOOK_SECRET`. Add `SCOUT_CRON_SECRET` if an external scheduler will call the scout endpoint.
 
 For local development, add the same values to `.env`.
 

@@ -11,6 +11,8 @@ import { parseScrapedHtml } from "../src/lib/scraper.ts";
 
 const TELEGRAM_CHAT_ID = "save-flow-test-chat";
 const TELEGRAM_URL = "https://www.linkedin.com/jobs/view/123456789";
+const TELEGRAM_WEBHOOK_SECRET = "save-flow-webhook-secret";
+const TELEGRAM_WEBHOOK_SECRET_HEADER = "X-Telegram-Bot-Api-Secret-Token";
 
 async function fixture(name: string): Promise<string> {
   return readFile(new URL(`./fixtures/${name}`, import.meta.url), "utf8");
@@ -78,6 +80,7 @@ beforeEach(async () => {
 afterEach(async () => {
   await removeTelegramTestRows();
   delete process.env.TELEGRAM_CHAT_ID;
+  delete process.env.TELEGRAM_WEBHOOK_SECRET;
 });
 
 describe("save-flow metadata wiring", () => {
@@ -119,6 +122,7 @@ describe("save-flow metadata wiring", () => {
 
   it("stores the normalized title and blank summary when Telegram saves a link", async () => {
     process.env.TELEGRAM_CHAT_ID = TELEGRAM_CHAT_ID;
+    process.env.TELEGRAM_WEBHOOK_SECRET = TELEGRAM_WEBHOOK_SECRET;
     const scraped = parseScrapedHtml(
       TELEGRAM_URL,
       await fixture("linkedin-generic.html"),
@@ -141,7 +145,10 @@ describe("save-flow metadata wiring", () => {
     await withServer(app, async (baseUrl) => {
       const response = await fetch(`${baseUrl}/telegram-webhook`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          [TELEGRAM_WEBHOOK_SECRET_HEADER]: TELEGRAM_WEBHOOK_SECRET,
+        },
         body: JSON.stringify({
           update_id: 1,
           message: {
@@ -180,6 +187,59 @@ describe("save-flow metadata wiring", () => {
 
   it("ignores valid URLs from an unauthorized Telegram chat", async () => {
     process.env.TELEGRAM_CHAT_ID = TELEGRAM_CHAT_ID;
+    process.env.TELEGRAM_WEBHOOK_SECRET = TELEGRAM_WEBHOOK_SECRET;
+    let validateCalls = 0;
+    let scrapeCalls = 0;
+    let replyCalls = 0;
+    const app = authenticatedApp(
+      createTelegramWebhookRouter({
+        validateScrapeUrl: async (url) => {
+          validateCalls += 1;
+          return new URL(url);
+        },
+        scrapeUrl: async () => {
+          scrapeCalls += 1;
+          throw new Error("Scraper should not be called");
+        },
+        sendReply: async () => {
+          replyCalls += 1;
+        },
+      }),
+    );
+
+    await withServer(app, async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/telegram-webhook`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          [TELEGRAM_WEBHOOK_SECRET_HEADER]: TELEGRAM_WEBHOOK_SECRET,
+        },
+        body: JSON.stringify({
+          update_id: 2,
+          message: {
+            message_id: 43,
+            chat: { id: "unauthorized-chat" },
+            text: `Please save this opportunity: ${TELEGRAM_URL}`,
+          },
+        }),
+      });
+
+      assert.equal(response.status, 200);
+      assert.equal(validateCalls, 0);
+      assert.equal(scrapeCalls, 0);
+      assert.equal(replyCalls, 0);
+
+      const [inserted] = await db
+        .select({ id: opportunitiesTable.id })
+        .from(opportunitiesTable)
+        .where(eq(opportunitiesTable.url, TELEGRAM_URL));
+      assert.equal(inserted, undefined);
+    });
+  });
+
+  it("rejects requests without Telegram's webhook secret before processing", async () => {
+    process.env.TELEGRAM_CHAT_ID = TELEGRAM_CHAT_ID;
+    process.env.TELEGRAM_WEBHOOK_SECRET = TELEGRAM_WEBHOOK_SECRET;
     let validateCalls = 0;
     let scrapeCalls = 0;
     let replyCalls = 0;
@@ -204,16 +264,16 @@ describe("save-flow metadata wiring", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          update_id: 2,
+          update_id: 3,
           message: {
-            message_id: 43,
-            chat: { id: "unauthorized-chat" },
+            message_id: 44,
+            chat: { id: TELEGRAM_CHAT_ID },
             text: `Please save this opportunity: ${TELEGRAM_URL}`,
           },
         }),
       });
 
-      assert.equal(response.status, 200);
+      assert.equal(response.status, 401);
       assert.equal(validateCalls, 0);
       assert.equal(scrapeCalls, 0);
       assert.equal(replyCalls, 0);
