@@ -264,8 +264,27 @@ export function createTelegramWebhookRouter(
     }
 
     const text = message.text.trim();
+
+    // 1. Handle Commands (/start, /help, /digest)
+    if (text.startsWith("/start") || text.startsWith("/help")) {
+      await reply(
+        message.chat.id,
+        "👋 <b>Welcome to Opportunity Tracker Bot!</b>\n\nPaste any job or grant link (e.g., <code>https://...</code>) and I will automatically save it to your dashboard!",
+        message.message_id
+      );
+      return;
+    }
+
+    // 2. Extract URL for scraping
     const urlMatch = URL_REGEX.exec(text);
-    if (!urlMatch) return;
+    if (!urlMatch) {
+      await reply(
+        message.chat.id,
+        "💡 Please send a valid link starting with <code>http://</code> or <code>https://</code> to track an opportunity.",
+        message.message_id
+      );
+      return;
+    }
 
     const url = urlMatch[0];
     const chatId = message.chat.id;
