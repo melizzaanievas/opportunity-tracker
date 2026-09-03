@@ -1,11 +1,23 @@
+import path from "path";
+import express from "express";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startCronJobs } from "./lib/cron";
 import { registerTelegramWebhook } from "./lib/register-webhook";
 import { handleTelegramWebhook } from "./telegram/webhook";
 
+// 1. Serve static frontend files from Vite build output
+const staticPath = path.resolve(__dirname, "../../opportunity-tracker/dist/public");
+app.use(express.static(staticPath));
+
 // Register the Telegram Webhook handler endpoint
 app.post("/api/telegram/webhook", handleTelegramWebhook);
+
+// 2. Fallback route: serve index.html for React SPA routing (for any non-API request)
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api")) return next();
+  res.sendFile(path.join(staticPath, "index.html"));
+});
 
 const rawPort = process.env.PORT;
 
@@ -29,8 +41,7 @@ app.listen(port, (err) => {
 
   logger.info({ port }, "Server listening");
   startCronJobs();
-  // Register Telegram webhook after a short delay to ensure the server is
-  // fully accepting connections before Telegram tries to verify the URL.
+  
   setTimeout(() => {
     void registerTelegramWebhook().catch((err: unknown) => {
       logger.error(
