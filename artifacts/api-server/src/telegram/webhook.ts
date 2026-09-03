@@ -21,25 +21,26 @@ export async function handleTelegramWebhook(req: Request, res: Response) {
   console.log("Received Telegram Update:", JSON.stringify(update));
 
   try {
-    // 1. Handle incoming chat messages (like /start or /digest)
     if (update?.message?.text) {
+      const chatId = update.message.chat.id;
       const text = update.message.text.trim();
 
       if (text.startsWith("/start") || text.startsWith("/help")) {
         await sendTelegramMessage(
-          "👋 <b>Welcome to Opportunity Tracker Bot!</b>\n\nI will send you daily updates and scout alerts for incoming opportunities.\n\nType /digest anytime to see your upcoming deadlines!"
+          "👋 <b>Welcome to Opportunity Tracker Bot!</b>\n\nI will send you daily updates and scout alerts for incoming opportunities.\n\nType /digest anytime to see your upcoming deadlines!",
+          chatId
         );
       } else if (text.startsWith("/digest")) {
         const summary = await buildDailySummary();
-        await sendTelegramMessage(summary.text);
+        await sendTelegramMessage(summary.text, chatId);
       } else {
         await sendTelegramMessage(
-          `Received: "${text}"\n\nType /digest to view upcoming deadlines.`
+          `Received: "${text}"\n\nType /digest to view upcoming deadlines.`,
+          chatId
         );
       }
     }
 
-    // 2. Handle button clicks on scout messages (inline keyboard callbacks)
     if (update?.callback_query) {
       const callback = update.callback_query;
       await answerTelegramCallbackQuery(callback.id, "Processing your choice...");
