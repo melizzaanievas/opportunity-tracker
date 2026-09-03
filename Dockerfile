@@ -1,6 +1,6 @@
 FROM node:22-alpine
 
-# Install pnpm globally
+# Enable Corepack and activate pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
@@ -8,8 +8,8 @@ WORKDIR /app
 # Copy entire monorepo context
 COPY . .
 
-# Install all workspace dependencies
-RUN pnpm install --frozen-lockfile
+# Install workspace dependencies without lockfile strictness
+RUN pnpm install --no-frozen-lockfile
 
 # Set environment variable safety nets
 ENV BASE_PATH="/"
