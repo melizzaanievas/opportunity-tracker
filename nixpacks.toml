@@ -8,7 +8,7 @@ nixPkgs = ['pnpm']
 cmds = ['pnpm install --frozen-lockfile --ignore-scripts']
 
 [phases.build]
-cmds = ['pnpm --filter ./artifacts/opportunity-tracker run build']
+cmds = ['pnpm --filter @workspace/api-server run build']
 
 [start]
-cmd = 'npx -y serve -s artifacts/opportunity-tracker/dist -l $PORT'
+cmd = 'node artifacts/api-server/dist/index.js'
