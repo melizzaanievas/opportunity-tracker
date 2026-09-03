@@ -8,7 +8,7 @@ nixPkgs = ['pnpm']
 cmds = ['pnpm install --no-frozen-lockfile']
 
 [phases.build]
-cmds = ['pnpm --filter @workspace/opportunity-tracker run build']
+cmds = ['pnpm --filter ./artifacts/opportunity-tracker run build']
 
 [start]
-cmd = 'pnpm --filter @workspace/opportunity-tracker run preview'
+cmd = 'pnpm --filter ./artifacts/opportunity-tracker run preview'
