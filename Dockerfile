@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:22-alpine
 
 # Install pnpm globally
 RUN corepack enable && corepack prepare pnpm@latest --activate
@@ -11,7 +11,7 @@ COPY . .
 # Install all workspace dependencies
 RUN pnpm install --frozen-lockfile
 
-# Set environment variable safety nets to prevent Vite/frontend check crashes
+# Set environment variable safety nets
 ENV BASE_PATH="/"
 ENV NODE_ENV="production"
 
