@@ -5,7 +5,7 @@ providers = ['node']
 nixPkgs = ['pnpm']
 
 [phases.install]
-cmds = ['pnpm install --no-frozen-lockfile']
+cmds = ['pnpm install --frozen-lockfile --ignore-scripts']
 
 [phases.build]
 cmds = ['pnpm --filter ./artifacts/opportunity-tracker run build']
