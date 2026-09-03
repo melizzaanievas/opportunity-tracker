@@ -1,88 +1,76 @@
-# 🎯 Opportunity Tracker & Executive Pipeline Dashboard
+# 🚀 Opportunity Tracker & Link Ingestion Hub
 
-A sleek, minimalist, multi-platform opportunity management workspace designed to aggregate, track, and streamline applications across jobs, fellowships, casting calls, grants, and competitions. Built with a unified view-switching engine, automated deliverable extraction, and intelligent scouting integrations.
+An automated, cross-platform **Opportunity Tracker** designed to capture, organize, and manage incoming links, leads, and ideas. 
+
+It connects a lightweight **React (Vite) Frontend** hosted on **Vercel** with a high-performance **Node.js (Express) API Backend** hosted on **Railway**, powered by an automated **Telegram Bot** for instant link ingestion.
+
+---
+
+## 📸 Live Demo & Screenshots
+
+> **Note:** WORK IN PROGRESS
 
 ---
 
 ## ✨ Features
 
-* **Unified View Switcher System:**
-  * **Grid View:** High-density, customizable cards displaying status, deadlines, and key metadata.
-  * **Kanban Board:** Drag-and-drop pipeline stages (`To Apply`, `Applied / Pending`, `Interviewing`, `Offered`, `Archived`).
-  * **Calendar View:** Interactive visual timeline tracking upcoming deadlines and submission windows.
-  * **Pipeline Analytics:** Dedicated metrics workspace breaking down category distribution without main dashboard clutter.
-
-* **Automated Task & Deliverable Parser:**
-  * Scrapes target application links upon saving.
-  * Auto-extracts required submission deliverables (e.g., CV/Resume, Cover Letter, Portfolio, Audition Video, Headshot) into actionable checklists.
-
-* **Multi-Platform Scouting Engine:**
-  * Automated job/opportunity scouting across LinkedIn, Indeed, X (Twitter), and Google Search via SerpAPI/JSearch.
-  * Scheduled Telegram Bot updates delivering daily digests directly to your chat.
-
-* **Interactive Onboarding & Health Diagnostics:**
-  * Step-by-step interactive demo tour powered by `driver.js`.
-  * Auto-healing Telegram webhook registration to prevent environment URL drift.
+- **⚡ Instant Link Ingestion:** Share any link or opportunity directly to your dedicated Telegram Bot, and it automatically parses, categorizes, and saves the data.
+- **🔒 Passcode Authentication:** Simple, session-based password authorization to keep your links and dashboard private.
+- **📊 Opportunity Dashboard:** Clean UI built with React, Tailwind CSS, and Radix UI components for filtering, search, and categorization.
+- **🐳 Production-Ready Dockerized Backend:** Pre-configured Docker build pipeline supporting native C++ bindings (`better-sqlite3`, `esbuild`) on lightweight Alpine Linux containers.
+- **🔄 Monorepo Architecture:** Clean package isolation using `pnpm` workspaces (`/artifacts/opportunity-tracker` and `/artifacts/api-server`).
 
 ---
 
-## 🛠️ Tech Stack
+## 🚀 One-Click Self-Hosting & Deployment
 
-* **Frontend:** React, TypeScript, Tailwind CSS, Lucide React, Framer Motion, Driver.js
-* **Backend:** Node.js, Express, Drizzle ORM, PostgreSQL (Supabase / Neon)
-* **Integrations:** Telegram Bot API, SerpAPI / JSearch API, ZenQuotes API
-* **Deployment:** Node.js / Vercel / Render / Railway
+The easiest way to run your own private instance without sharing your personal dashboard URL or incurring heavy maintenance:
+
+### 1. Backend Deployment (Railway)
+1. Fork this repository to your GitHub account.
+2. Create a new service on [Railway](https://railway.app) and select **Deploy from GitHub repo**.
+3. Railway will automatically detect the root `Dockerfile`.
+4. Add the following **Environment Variables** in Railway:
+   - `APP_PASSWORD`: Your secret passcode for logging in.
+   - `SESSION_SECRET`: A long random string for session encryption.
+   - `PORT`: `5000`
+
+### 2. Frontend Deployment (Vercel)
+1. Import your forked repository into [Vercel](https://vercel.com).
+2. Update the root **`vercel.json`** file in your GitHub repo to point `/api` requests to your Railway public domain:
+   ```json
+   {
+     "outputDirectory": "artifacts/opportunity-tracker/dist/public",
+     "rewrites": [
+       {
+         "source": "/api/:path*",
+         "destination": "[https://YOUR-RAILWAY-APP.up.railway.app/api/:path](https://YOUR-RAILWAY-APP.up.railway.app/api/:path)*"
+       },
+       {
+         "source": "/(.*)",
+         "destination": "/index.html"
+       }
+     ]
+   }
+   ```
+3. Deploy! Vercel will automatically compile the Vite frontend and route authentication calls to Railway.
 
 ---
 
-## 🚀 Getting Started
-
-### 1. Prerequisites
-
-* **Node.js:** `v18.x` or higher
-* **npm:** `v9.x` or higher
-* **PostgreSQL Database:** Supabase, Neon, or local instance
-
-### 2. Installation & Setup
-
-Clone the repository and install dependencies:
+## 💻 Local Development Setup
+Ensure you have Node 22 and pnpm installed.
 
 ```bash
+# Clone the repository
 git clone [https://github.com/melizzaanievas/opportunity-tracker.git](https://github.com/melizzaanievas/opportunity-tracker.git)
 cd opportunity-tracker
-npm install
+
+# Install monorepo dependencies
+pnpm install
+
+# Start development servers (Frontend + Backend)
+pnpm dev
 ```
-
-### 3. Environment Configuration
-Create a .env file in the root directory and populate it based on .env.example:
-
-```text
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/opportunity_db
-
-# Telegram Integration
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-TELEGRAM_WEBHOOK_SECRET=your_telegram_webhook_secret
-
-# External APIs
-SERPAPI_KEY=your_serpapi_key
-```
-
-### 4. Database Setup & Migrations
-Push the Drizzle ORM schema to your PostgreSQL database:
-
-```bash
-npm run db:push
-```
-
-5. Running the Application
-Start the development server (frontend & backend concurrently):
-
-```bash
-npm run dev
-```
-
-Open your browser and navigate to http://localhost:5000 (or the port specified in your console).
 
 ## 📄 License
-This project is licensed under the MIT License.
+MIT License. Free for personal and commercial use.
