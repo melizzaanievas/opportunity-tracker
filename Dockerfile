@@ -1,27 +1,24 @@
 FROM node:22-alpine
 
-# Enable Corepack and activate pnpm
+# Enable Corepack and prepare pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-# Copy monorepo files
+# Copy monorepo files (including .npmrc)
 COPY . .
 
-# Install dependencies without blocking on lockfile
+# Install workspace dependencies cleanly
 RUN pnpm install --no-frozen-lockfile
 
-# Approve build scripts for all native modules (better-sqlite3, esbuild)
-RUN pnpm approve-builds --all
-
-# Set build safety variables
+# Set environment safety nets
 ENV BASE_PATH="/"
 ENV NODE_ENV="production"
 
-# Build ONLY the Express backend
+# Build strictly the Express API server package
 RUN pnpm --filter @workspace/api-server build
 
 EXPOSE 5000
 
-# Start ONLY the Express backend
+# Start strictly the Express API server package
 CMD ["pnpm", "--filter", "@workspace/api-server", "start"]
