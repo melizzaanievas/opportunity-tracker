@@ -75,8 +75,11 @@ async function telegramRequest<T>(
   }
 }
 
-export async function sendTelegramMessage(text: string): Promise<boolean> {
-  const chatId = process.env.TELEGRAM_CHAT_ID;
+export async function sendTelegramMessage(
+  text: string,
+  targetChatId?: string | number,
+): Promise<boolean> {
+  const chatId = targetChatId || process.env.TELEGRAM_CHAT_ID;
 
   if (!chatId) {
     logger.warn("Telegram credentials not configured");
