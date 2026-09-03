@@ -11,4 +11,4 @@ cmds = ['pnpm install --frozen-lockfile --ignore-scripts']
 cmds = ['pnpm --filter @workspace/opportunity-tracker run build']
 
 [start]
-cmd = 'npx -y serve -s artifacts/opportunity-tracker/dist -l $PORT'
+cmd = 'npx -y serve -s artifacts/opportunity-tracker/dist -l tcp://0.0.0.0:8080'
