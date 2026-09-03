@@ -1,0 +1,14 @@
+[providers]
+providers = ['node']
+
+[phases.setup]
+nixPkgs = ['pnpm']
+
+[phases.install]
+cmds = ['pnpm install --no-frozen-lockfile']
+
+[phases.build]
+cmds = ['pnpm --filter @workspace/opportunity-tracker run build']
+
+[start]
+cmd = 'pnpm --filter @workspace/opportunity-tracker run preview'
