@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://applynow-melizza.replit.app/api/:path*"
+      "destination": "https://applynow-melizza.replit.app/dashboard/api/:path*"
     },
     {
       "source": "/(.*)",
