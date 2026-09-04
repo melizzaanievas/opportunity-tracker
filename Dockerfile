@@ -6,8 +6,9 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 COPY . .
 
-# Run install with built dependencies authorized via pnpm config
-RUN pnpm install --no-frozen-lockfile --config.only-built-dependencies=true
+# Install dependencies, then approve and run native build scripts
+RUN pnpm install --no-frozen-lockfile
+RUN pnpm approve-builds
 
 # Build frontend and backend
 RUN pnpm --filter opportunity-tracker build
