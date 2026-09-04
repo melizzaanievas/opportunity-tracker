@@ -1,13 +1,18 @@
-FROM node:22-alpine
-RUN apk add --no-cache python3 make g++
+FROM node:22-slim
+
+# Install C++ build tools required by better-sqlite3 for glibc
+RUN apt-get update && apt-get install -y python3 make g++ --no-install-recommends && rm -rf /var/lib/apt/lists/*
+
+# Enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
+
 WORKDIR /app
 COPY . .
 
-# Install dependencies (pnpm will now execute native builds for approved packages)
+# Install dependencies matching glibc/linux-x64
 RUN pnpm install --no-frozen-lockfile
 
-# Build frontend and backend
+# Build both applications
 RUN pnpm --filter opportunity-tracker build
 RUN pnpm --filter @workspace/api-server build
 
