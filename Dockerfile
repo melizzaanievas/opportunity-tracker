@@ -10,7 +10,7 @@ WORKDIR /app
 COPY . .
 
 # Install dependencies matching glibc/linux-x64
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm install --no-frozen-lockfile --no-only-built-dependencies
 
 # Build both applications
 RUN pnpm --filter opportunity-tracker build
