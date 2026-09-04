@@ -4,8 +4,9 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 COPY . .
 
-# Bypass pnpm ignored build scripts block during Docker build
-RUN pnpm install --no-frozen-lockfile --config.ignore-scripts=false
+# Approve build scripts and install packages cleanly
+RUN pnpm approve-builds --all || true
+RUN pnpm install --no-frozen-lockfile --ignore-scripts=false
 
 # Rebuild native bindings explicitly for Alpine Linux
 RUN pnpm rebuild better-sqlite3 esbuild @rollup/rollup-linux-x64-musl
