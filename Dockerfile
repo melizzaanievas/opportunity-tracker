@@ -6,8 +6,8 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 COPY . .
 
-# Environment variable to authorize native build scripts without modifying pnpm-workspace.yaml
-ENV npm_config_only_built_dependencies="better-sqlite3,esbuild"
+# Pass approved build dependencies via pnpm's native env var config
+ENV pnpm_config_only_built_dependencies="better-sqlite3,esbuild"
 
 # Run pnpm install
 RUN pnpm install --no-frozen-lockfile
