@@ -4,13 +4,13 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 COPY . .
 
-# Install dependencies including optional platform binaries
-RUN pnpm install --no-frozen-lockfile
+# Bypass pnpm ignored build scripts block during Docker build
+RUN pnpm install --no-frozen-lockfile --config.ignore-scripts=false
 
-# Force rebuild of native bindings for Alpine Linux
+# Rebuild native bindings explicitly for Alpine Linux
 RUN pnpm rebuild better-sqlite3 esbuild @rollup/rollup-linux-x64-musl
 
-# Build both API server and Frontend
+# Build frontend and backend
 RUN pnpm --filter opportunity-tracker build
 RUN pnpm --filter @workspace/api-server build
 
