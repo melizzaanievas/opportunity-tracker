@@ -6,11 +6,11 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 COPY . .
 
-# Pass approved build dependencies via pnpm's native env var config
-ENV pnpm_config_only_built_dependencies="better-sqlite3,esbuild"
+# Force pnpm to ignore lifecycle scripts during install
+RUN pnpm install --no-frozen-lockfile --ignore-scripts
 
-# Run pnpm install
-RUN pnpm install --no-frozen-lockfile
+# Manually trigger native compilation for necessary packages
+RUN pnpm rebuild better-sqlite3 esbuild
 
 # Build frontend and backend
 RUN pnpm --filter opportunity-tracker build
