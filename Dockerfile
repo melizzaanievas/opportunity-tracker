@@ -4,12 +4,8 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 COPY . .
 
-# Approve build scripts and install packages cleanly
-RUN pnpm approve-builds --all || true
-RUN pnpm install --no-frozen-lockfile --ignore-scripts=false
-
-# Rebuild native bindings explicitly for Alpine Linux
-RUN pnpm rebuild better-sqlite3 esbuild @rollup/rollup-linux-x64-musl
+# Install dependencies (pnpm will now execute native builds for approved packages)
+RUN pnpm install --no-frozen-lockfile
 
 # Build frontend and backend
 RUN pnpm --filter opportunity-tracker build
