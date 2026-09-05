@@ -30,17 +30,10 @@ app.use(
   }),
 );
 
-// Enhanced CORS setup allowing cookie exchange across Railway deployments
+// Explicit CORS for cross-domain credentials
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like server-to-server or curl) or any Railway app domain
-      if (!origin || origin.includes("railway.app") || origin.includes("localhost")) {
-        callback(null, origin || true);
-      } else {
-        callback(null, true);
-      }
-    },
+    origin: "https://applynow-melizza.up.railway.app",
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
@@ -60,10 +53,10 @@ app.use(
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
-    proxy: true, // Explicitly tell express-session to trust Railway's proxy
+    proxy: true,
     cookie: {
-      secure: process.env.NODE_ENV === "production" ? "auto" : false, // Dynamically match protocol
-      sameSite: "lax",
+      secure: true, // Required when sameSite is 'none'
+      sameSite: "none", // Allows cookies across separate Railway domains
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     },
@@ -72,8 +65,7 @@ app.use(
 
 app.use("/api", router);
 
-// API paths must always receive an API response. Never fall through to a
-// browser-rendered frontend 404 page.
+// API 404 fallback
 app.use("/api", (_req, res) => {
   res.status(404).json({ error: "API route not found" });
 });
