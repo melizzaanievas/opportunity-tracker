@@ -12,7 +12,7 @@ import scoutRouter from "./scout";
 const router: IRouter = Router();
 
 router.use(healthRouter);
-router.use(authRouter);
+router.use("/auth", authRouter);
 router.use(opportunitiesRouter);
 router.use(tasksRouter);
 router.use(integrationsRouter);
