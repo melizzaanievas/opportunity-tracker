@@ -6,18 +6,17 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 COPY . .
 
-# Force pnpm to ignore lifecycle scripts during install
 RUN pnpm install --no-frozen-lockfile --ignore-scripts
-
-# Manually trigger native compilation for necessary packages
 RUN pnpm rebuild better-sqlite3 esbuild
 
-# Provide build-time environment variables required for Vite client build
+# Hardcode the backend URL for Vite during compilation
 ENV PORT=5000
 ENV BASE_PATH=/
-ENV VITE_API_BASE_URL=/api
+ENV VITE_API_BASE_URL=https://applynow.up.railway.app
 
-# Build frontend and backend
+# Force Docker cache to bust for the build step
+RUN echo "rebuild-1"
+
 RUN pnpm --filter opportunity-tracker build
 RUN pnpm --filter @workspace/api-server build
 
