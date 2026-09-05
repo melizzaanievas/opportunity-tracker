@@ -7,7 +7,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import './index.css';
 
 // 2. Add this line right here:
-setBaseUrl('https://applynow-nerdbunny.up.railway.app');
+setBaseUrl(import.meta.env.VITE_API_BASE_URL || 'https://applynow.up.railway.app');
 
 createRoot(document.getElementById('root')!, {
   onCaughtError: (error, errorInfo) => {
