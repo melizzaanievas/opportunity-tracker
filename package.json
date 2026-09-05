@@ -2,8 +2,8 @@
   "name": "workspace",
   "version": "0.0.0",
   "license": "MIT",
+  "packageManager": "pnpm@10.28.0",
   "scripts": {
-    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
     "prepare": "is-ci || git rev-parse --git-dir > /dev/null 2>&1 && git config core.hooksPath .githooks || true",
     "start": "node artifacts/api-server/dist/index.js",
     "build": "pnpm -r --filter \"./artifacts/**\" run build",
