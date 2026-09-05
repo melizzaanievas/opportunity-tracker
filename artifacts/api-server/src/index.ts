@@ -13,8 +13,8 @@ app.use(express.static(staticPath));
 // Register the Telegram Webhook handler endpoint
 app.post("/api/telegram/webhook", handleTelegramWebhook);
 
-// 2. Fallback route: serve index.html for React SPA routing (for any non-API request)
-app.get("/(.*)", (req, res, next) => {
+// 2. Fallback route: serve index.html for React SPA routing (Express 5 named parameter syntax)
+app.get("/{*path}", (req, res, next) => {
   if (req.path.startsWith("/api")) return next();
   res.sendFile(path.join(staticPath, "index.html"));
 });
