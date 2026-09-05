@@ -7,6 +7,9 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 
+// Required so Express respects HTTPS headers from Railway's reverse proxy
+app.set("trust proxy", 1);
+
 app.use(
   pinoHttp({
     logger,
@@ -48,7 +51,9 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false, // set true if behind HTTPS proxy in prod
+      // Enables secure cookies when running on Railway in production
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     },
