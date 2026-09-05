@@ -12,6 +12,9 @@ RUN pnpm install --no-frozen-lockfile --ignore-scripts
 # Manually trigger native compilation for necessary packages
 RUN pnpm rebuild better-sqlite3 esbuild
 
+# Provide default PORT environment variable for build-time evaluation
+ENV PORT=5000
+
 # Build frontend and backend
 RUN pnpm --filter opportunity-tracker build
 RUN pnpm --filter @workspace/api-server build
