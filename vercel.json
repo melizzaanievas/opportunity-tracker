@@ -1,5 +1,4 @@
 {
-  "outputDirectory": "artifacts/opportunity-tracker/dist/public",
   "rewrites": [
     {
       "source": "/api/:path*",
