@@ -30,10 +30,20 @@ app.use(
   }),
 );
 
+// Enhanced CORS setup allowing cookie exchange across Railway deployments
 app.use(
   cors({
-    origin: true,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like server-to-server or curl) or any Railway app domain
+      if (!origin || origin.includes("railway.app") || origin.includes("localhost")) {
+        callback(null, origin || true);
+      } else {
+        callback(null, true);
+      }
+    },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
   }),
 );
 
