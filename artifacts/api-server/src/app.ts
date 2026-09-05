@@ -50,9 +50,9 @@ app.use(
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
+    proxy: true, // Explicitly tell express-session to trust Railway's proxy
     cookie: {
-      // Enables secure cookies when running on Railway in production
-      secure: process.env.NODE_ENV === "production",
+      secure: process.env.NODE_ENV === "production" ? "auto" : false, // Dynamically match protocol
       sameSite: "lax",
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
