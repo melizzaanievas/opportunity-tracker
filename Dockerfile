@@ -12,9 +12,10 @@ RUN pnpm install --no-frozen-lockfile --ignore-scripts
 # Manually trigger native compilation for necessary packages
 RUN pnpm rebuild better-sqlite3 esbuild
 
-# Provide build-time fallback environment variables required by vite.config.ts
+# Provide build-time environment variables required for Vite client build
 ENV PORT=5000
 ENV BASE_PATH=/
+ENV VITE_API_BASE_URL=/api
 
 # Build frontend and backend
 RUN pnpm --filter opportunity-tracker build
