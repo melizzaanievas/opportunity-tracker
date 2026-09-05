@@ -14,7 +14,7 @@ app.use(express.static(staticPath));
 app.post("/api/telegram/webhook", handleTelegramWebhook);
 
 // 2. Fallback route: serve index.html for React SPA routing (for any non-API request)
-app.get("*", (req, res, next) => {
+app.get("/(.*)", (req, res, next) => {
   if (req.path.startsWith("/api")) return next();
   res.sendFile(path.join(staticPath, "index.html"));
 });
@@ -41,7 +41,7 @@ app.listen(port, (err) => {
 
   logger.info({ port }, "Server listening");
   startCronJobs();
-  
+
   setTimeout(() => {
     void registerTelegramWebhook().catch((err: unknown) => {
       logger.error(
