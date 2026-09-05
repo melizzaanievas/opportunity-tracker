@@ -3,7 +3,7 @@ import { LoginBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
-router.post("/auth/login", async (req, res): Promise<void> => {
+router.post("/login", async (req, res): Promise<void> => {
   const parsed = LoginBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -33,13 +33,13 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   });
 });
 
-router.post("/auth/logout", (req, res): void => {
+router.post("/logout", (req, res): void => {
   req.session.destroy(() => {
     res.json({ authenticated: false });
   });
 });
 
-router.get("/auth/me", (req, res): void => {
+router.get("/me", (req, res): void => {
   res.json({ authenticated: !!req.session?.authenticated });
 });
 
