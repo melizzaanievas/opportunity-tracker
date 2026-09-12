@@ -4,10 +4,13 @@ RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
 
 WORKDIR /app
 
+# Copy full repository
 COPY . .
 
-RUN pnpm install --frozen-lockfile --ignore-scripts
+# Install dependencies (allowing scripts so esbuild and ts-node/tsc prepare properly)
+RUN pnpm install --frozen-lockfile
 
+# Compile the api-server project explicitly into dist/index.js
 RUN pnpm --filter @workspace/api-server run build
 
 EXPOSE 3000
