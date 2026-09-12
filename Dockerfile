@@ -1,18 +1,13 @@
-FROM node:22-alpine AS base
-
-# Install build dependencies for C++ native modules
-RUN apk add --no-cache python3 make g++ gcc
-
-# Set node-gyp to fetch headers directly from official Node.js releases
-ENV npm_config_tarball_url="https://nodejs.org/download/release/v22.23.2/node-v22.23.2-headers.tar.gz"
+FROM node:22-bookworm-slim AS base
 
 RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
 
 WORKDIR /app
 
+# Copy full repository
 COPY . .
 
-# Install dependencies with official header URL active
+# Install dependencies (uses prebuilt binaries automatically)
 RUN pnpm install --frozen-lockfile
 
 # Build the API server
