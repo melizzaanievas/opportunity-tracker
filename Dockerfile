@@ -4,14 +4,17 @@ RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
 
 WORKDIR /app
 
-# Copy full repository
+# Copy repository files
 COPY . .
 
-# Install dependencies allowing built dependencies (esbuild/sqlite) to run
+# Install dependencies (allows onlyBuiltDependencies like esbuild/better-sqlite3)
 RUN pnpm install --frozen-lockfile
 
-# Explicitly build the API server package
-RUN pnpm --filter @workspace/api-server run build
+# Build all workspace packages and artifacts sequentially
+RUN pnpm run build
+
+# Verify build output exists during image creation to fail fast if compilation misses
+RUN test -f artifacts/api-server/dist/index.js || (echo "Error: dist/index.js was not generated!" && exit 1)
 
 EXPOSE 3000
 
