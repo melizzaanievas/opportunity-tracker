@@ -2,6 +2,7 @@ import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
+import path from "path";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -29,13 +30,10 @@ app.use(
   }),
 );
 
-// Allow cross-origin requests & custom authentication headers
 app.use(
   cors({
     origin: true,
     credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie", "x-passcode"],
   }),
 );
 
@@ -49,32 +47,25 @@ app.use(
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
-    proxy: true,
     name: "connect.sid",
     cookie: {
       secure: true,
-      sameSite: "none",
+      sameSite: "lax", // Standard first-party cookie policy
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     },
   }),
 );
 
-// BYPASS COOKIE BLOCKS: If passcode matches APP_PASSWORD, force session authentication
-app.use((req, _res, next) => {
-  const passcodeHeader = req.headers["x-passcode"] as string;
-  const appPassword = process.env.APP_PASSWORD;
-  
-  if (passcodeHeader && appPassword && passcodeHeader === appPassword) {
-    (req.session as any).authenticated = true;
-  }
-  next();
-});
-
+// Serve API routes
 app.use("/api", router);
 
-app.use("/api", (_req, res) => {
-  res.status(404).json({ error: "API route not found" });
+// Serve Vite frontend static assets from Railway directly
+const frontendPath = path.join(__dirname, "../../opportunity-tracker/dist/public");
+app.use(express.static(frontendPath));
+
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(frontendPath, "index.html"));
 });
 
 export default app;
