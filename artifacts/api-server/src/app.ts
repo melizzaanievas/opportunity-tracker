@@ -1,3 +1,4 @@
+import type { RequestHandler } from "express";
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
@@ -41,6 +42,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const sessionSecret = process.env.SESSION_SECRET || "supersecretkey1234567890";
+const isProd = process.env.NODE_ENV === "production";
 
 app.use(
   session({
@@ -49,13 +51,30 @@ app.use(
     saveUninitialized: false,
     name: "connect.sid",
     cookie: {
-      secure: true,
-      sameSite: "lax", // Standard first-party cookie policy
+      // Only require secure cookies in production (where HTTPS is expected).
+      secure: isProd,
+      // For cross-site cookies (frontend hosted separately) we need 'none' in prod,
+      // but browsers require secure:true when sameSite is 'none'. For local
+      // development we use 'lax' so cookies work over HTTP.
+      sameSite: isProd ? "none" : "lax",
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     },
   }),
 );
+
+// BYPASS COOKIE BLOCKS: If passcode matches APP_PASSWORD, force session authentication
+const passcodeBypass: RequestHandler = (req, _res, next) => {
+  const passcodeHeader = req.headers["x-passcode"] as string;
+  const appPassword = process.env.APP_PASSWORD;
+  
+  if (passcodeHeader && appPassword && passcodeHeader === appPassword) {
+    (req.session as any).authenticated = true;
+  }
+  next();
+};
+
+app.use(passcodeBypass);
 
 // Serve API routes
 app.use("/api", router);
