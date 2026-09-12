@@ -17,8 +17,9 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @workspace/api-server run build
 
 # Verify build output exists before concluding build phase
-RUN test -f artifacts/api-server/dist/index.js || (echo "Build failed: dist/index.js not found!" && exit 1)
+RUN test -f artifacts/api-server/dist/index.mjs || (echo "Build failed: dist/index.mjs not found!" && exit 1)
 
 EXPOSE 3000
 
-CMD ["node", "artifacts/api-server/dist/index.js"]
+CMD ["node", "artifacts/api-server/dist/index.mjs"]
+
