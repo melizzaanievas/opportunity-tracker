@@ -4,15 +4,16 @@ RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
 
 WORKDIR /app
 
-# Copy full repository
+# Copy repository files
 COPY . .
 
-# Install dependencies ignoring native build scripts
+# Install dependencies ignoring native scripts
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
-# Build only the API server target
-RUN pnpm --filter @workspace/api-server run build
+# Build all workspace projects (both api-server and opportunity-tracker)
+RUN pnpm run build
 
 EXPOSE 3000
 
+# Explicitly start the API server node entrypoint
 CMD ["node", "artifacts/api-server/dist/index.js"]
