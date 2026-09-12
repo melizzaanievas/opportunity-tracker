@@ -7,10 +7,10 @@ WORKDIR /app
 # Copy full repository
 COPY . .
 
-# Install dependencies (allowing scripts so esbuild and ts-node/tsc prepare properly)
+# Install dependencies allowing built dependencies (esbuild/sqlite) to run
 RUN pnpm install --frozen-lockfile
 
-# Compile the api-server project explicitly into dist/index.js
+# Explicitly build the API server package
 RUN pnpm --filter @workspace/api-server run build
 
 EXPOSE 3000
