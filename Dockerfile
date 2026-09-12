@@ -7,10 +7,10 @@ WORKDIR /app
 # Copy full repository
 COPY . .
 
-# Install dependencies (uses prebuilt binaries automatically)
-RUN pnpm install --frozen-lockfile
+# Install dependencies ignoring native build scripts
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
-# Build the API server
+# Build only the API server target
 RUN pnpm --filter @workspace/api-server run build
 
 EXPOSE 3000
