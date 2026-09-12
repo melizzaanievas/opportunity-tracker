@@ -7,7 +7,6 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 
-// Trust Railway's upstream proxy so secure cookies function over HTTPS
 app.set("trust proxy", 1);
 
 app.use(
@@ -30,35 +29,20 @@ app.use(
   }),
 );
 
-// Dynamic CORS origin checker to guarantee credential support for Vercel & local environments
-const allowedOrigins = [
-  "https://applynow-nerdbunny.vercel.app",
-  process.env.APP_URL?.replace(/\/$/, ""),
-].filter(Boolean) as string[];
-
+// Allow cross-origin requests & custom authentication headers
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      const cleanOrigin = origin.replace(/\/$/, "");
-      if (allowedOrigins.includes(cleanOrigin) || cleanOrigin.endsWith(".vercel.app")) {
-        return callback(null, true);
-      }
-      return callback(null, true);
-    },
+    origin: true,
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie", "x-passcode"],
   }),
 );
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const sessionSecret = process.env.SESSION_SECRET;
-if (!sessionSecret) {
-  throw new Error("SESSION_SECRET must be set");
-}
+const sessionSecret = process.env.SESSION_SECRET || "supersecretkey1234567890";
 
 app.use(
   session({
@@ -75,6 +59,17 @@ app.use(
     },
   }),
 );
+
+// BYPASS COOKIE BLOCKS: If passcode matches APP_PASSWORD, force session authentication
+app.use((req, _res, next) => {
+  const passcodeHeader = req.headers["x-passcode"] as string;
+  const appPassword = process.env.APP_PASSWORD;
+  
+  if (passcodeHeader && appPassword && passcodeHeader === appPassword) {
+    (req.session as any).authenticated = true;
+  }
+  next();
+});
 
 app.use("/api", router);
 
