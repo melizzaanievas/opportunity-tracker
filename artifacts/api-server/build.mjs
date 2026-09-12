@@ -3,7 +3,29 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm } from "node:fs/promises";
+import { rm, readdir, appendFile } from "node:fs/promises";
+
+async function agentLog(payload) {
+  const body = {
+    sessionId: "c6c510",
+    timestamp: Date.now(),
+    ...payload,
+  };
+  await Promise.all([
+    fetch("http://127.0.0.1:7289/ingest/ebf50ced-c691-4ba2-8255-7761f1d6dd9f", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "c6c510",
+      },
+      body: JSON.stringify(body),
+    }).catch(() => {}),
+    appendFile(
+      "/Users/meliza/Github/opportunity-tracker/.cursor/debug-c6c510.log",
+      JSON.stringify(body) + "\n",
+    ).catch(() => {}),
+  ]);
+}
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
@@ -14,13 +36,19 @@ async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
 
+  const entryPoint = path.resolve(artifactDir, "src/index.ts");
+  // Emit .js so root start/Dockerfile can run artifacts/api-server/dist/index.js
+  const outExtension = {};
+  // #region agent log
+  await agentLog({runId:'post-fix',hypothesisId:'A',location:'artifacts/api-server/build.mjs:buildAll:entry',message:'esbuild config before bundle',data:{artifactDir,distDir,entryPoint,outExtension,format:'esm'}});
+  // #endregion
+
   await esbuild({
-    entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+    entryPoints: [entryPoint],
     platform: "node",
     bundle: true,
     format: "esm",
     outdir: distDir,
-    outExtension: { ".js": ".mjs" },
     logLevel: "info",
     // Some packages may not be bundleable, so we externalize them, we can add more here as needed.
     // Some of the packages below may not be imported or installed, but we're adding them in case they are in the future.
@@ -118,9 +146,23 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
   });
+
+  const distFiles = await readdir(distDir, { recursive: true });
+  const hasIndexJs = distFiles.includes("index.js");
+  // #region agent log
+  await agentLog({runId:'post-fix',hypothesisId:'A,D',location:'artifacts/api-server/build.mjs:buildAll:after',message:'esbuild output files',data:{distDir,distFiles,hasIndexJs,hasIndexMjs:distFiles.includes('index.mjs')}});
+  // #endregion
+  if (!hasIndexJs) {
+    throw new Error(
+      `API server build did not produce dist/index.js. Output files: ${distFiles.join(", ")}`,
+    );
+  }
 }
 
-buildAll().catch((err) => {
+buildAll().catch(async (err) => {
+  // #region agent log
+  await agentLog({runId:'post-fix',hypothesisId:'B',location:'artifacts/api-server/build.mjs:catch',message:'buildAll failed',data:{error:String(err),stack:err?.stack}});
+  // #endregion
   console.error(err);
   process.exit(1);
 });

@@ -13,10 +13,12 @@ COPY . .
 # Install dependencies across all workspaces
 RUN pnpm install --frozen-lockfile
 
-# Explicitly build the API server package
-RUN pnpm --filter @workspace/api-server run build
+# Build the API server (esbuild writes artifacts/api-server/dist/index.js)
+WORKDIR /app/artifacts/api-server
+RUN pnpm run build
+WORKDIR /app
 
-# Verify build output exists before concluding build phase
+# Verify the start entrypoint exists before concluding the image build
 RUN test -f artifacts/api-server/dist/index.js || (echo "Build failed: dist/index.js not found!" && exit 1)
 
 EXPOSE 3000
