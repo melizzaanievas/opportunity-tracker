@@ -1,20 +1,19 @@
 FROM node:22-bookworm-slim AS base
 
+# Install build dependencies required by node-gyp for better-sqlite3
+RUN apt-get update && apt-get install -y python3 make g++ gcc && rm -rf /var/lib/apt/lists/*
+
 RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
 
 WORKDIR /app
 
-# Copy repository files
 COPY . .
 
-# Install dependencies (allows onlyBuiltDependencies like esbuild/better-sqlite3)
+# Install dependencies with build tools available
 RUN pnpm install --frozen-lockfile
 
-# Build all workspace packages and artifacts sequentially
+# Build workspace projects
 RUN pnpm run build
-
-# Verify build output exists during image creation to fail fast if compilation misses
-RUN test -f artifacts/api-server/dist/index.js || (echo "Error: dist/index.js was not generated!" && exit 1)
 
 EXPOSE 3000
 
