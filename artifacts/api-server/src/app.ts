@@ -7,6 +7,7 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 
+// Trust Railway's upstream proxy so secure cookies function over HTTPS
 app.set("trust proxy", 1);
 
 app.use(
@@ -29,14 +30,24 @@ app.use(
   }),
 );
 
-// Dynamic CORS using process.env.APP_URL
-const allowedOrigin = process.env.APP_URL || "https://applynow-melizza.up.railway.app";
+// Dynamic CORS origin checker to guarantee credential support for Vercel & local environments
+const allowedOrigins = [
+  "https://applynow-nerdbunny.vercel.app",
+  process.env.APP_URL?.replace(/\/$/, ""),
+].filter(Boolean) as string[];
 
 app.use(
   cors({
-    origin: allowedOrigin,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const cleanOrigin = origin.replace(/\/$/, "");
+      if (allowedOrigins.includes(cleanOrigin) || cleanOrigin.endsWith(".vercel.app")) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
   }),
 );
@@ -55,9 +66,10 @@ app.use(
     resave: false,
     saveUninitialized: false,
     proxy: true,
+    name: "connect.sid",
     cookie: {
       secure: true,
-      sameSite: "none", // Cross-domain cookie setting
+      sameSite: "none",
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     },
