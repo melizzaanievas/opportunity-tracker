@@ -13,10 +13,11 @@ COPY . .
 # Install dependencies across all workspaces
 RUN pnpm install --frozen-lockfile
 
-# Build all workspace packages (frontend assets & api-server)
+# Pass PORT environment variable during build step
+ENV PORT=3000
 RUN pnpm run build
 
-# Ensure the expected public index.html file exists before running
+# Ensure static fallback directory exists
 RUN mkdir -p artifacts/opportunity-tracker/dist/public && \
     if [ ! -f artifacts/opportunity-tracker/dist/public/index.html ]; then \
       echo "<!DOCTYPE html><html><body><h1>API Server Running</h1></body></html>" > artifacts/opportunity-tracker/dist/public/index.html; \
