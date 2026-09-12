@@ -1,12 +1,16 @@
 FROM node:22-alpine AS base
+
+# Install build dependencies for C++ native modules (better-sqlite3)
+RUN apk add --no-cache python3 make g++ gcc
+
 RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
 
 WORKDIR /app
 
-# Copy all repository files
+# Copy repository files
 COPY . .
 
-# Install all workspace dependencies
+# Install dependencies (native modules will compile successfully now)
 RUN pnpm install --frozen-lockfile
 
 # Build the API server target
