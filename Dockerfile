@@ -24,4 +24,5 @@ RUN mkdir -p artifacts/opportunity-tracker/dist/public && \
 
 EXPOSE 3000
 
-CMD ["node", "artifacts/api-server/dist/index.js"]
+CMD ["node", "artifacts/api-server/dist/index.mjs"]
+
