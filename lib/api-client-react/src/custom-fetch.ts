@@ -26,6 +26,9 @@ let _authTokenGetter: AuthTokenGetter | null = null;
  * Pass `null` to clear the base URL.
  */
 export function setBaseUrl(url: string | null): void {
+  // Ensure we strip trailing slashes from the provided base URL.
+  // Use a regex literal with the dollar anchor to remove one or more
+  // trailing slashes: /\/+$/.  Then replace with an empty string.
   _baseUrl = url ? url.replace(/\/+$/, "") : null;
 }
 
@@ -360,7 +363,7 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  const response = await fetch(input, { ...init, method, headers, credentials: init.credentials ?? "include" });
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);
