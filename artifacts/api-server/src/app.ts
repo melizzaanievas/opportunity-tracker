@@ -2,6 +2,7 @@ import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
+import path from "path";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -29,45 +30,42 @@ app.use(
   }),
 );
 
-// Dynamic CORS using process.env.APP_URL
-const allowedOrigin = process.env.APP_URL || "https://applynow-melizza.up.railway.app";
-
 app.use(
   cors({
-    origin: allowedOrigin,
+    origin: true,
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
   }),
 );
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const sessionSecret = process.env.SESSION_SECRET;
-if (!sessionSecret) {
-  throw new Error("SESSION_SECRET must be set");
-}
+const sessionSecret = process.env.SESSION_SECRET || "supersecretkey1234567890";
 
 app.use(
   session({
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
-    proxy: true,
+    name: "connect.sid",
     cookie: {
       secure: true,
-      sameSite: "none", // Cross-domain cookie setting
+      sameSite: "lax", // Standard first-party cookie policy
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     },
   }),
 );
 
+// Serve API routes
 app.use("/api", router);
 
-app.use("/api", (_req, res) => {
-  res.status(404).json({ error: "API route not found" });
+// Serve Vite frontend static assets from Railway directly
+const frontendPath = path.join(__dirname, "../../opportunity-tracker/dist/public");
+app.use(express.static(frontendPath));
+
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(frontendPath, "index.html"));
 });
 
 export default app;
